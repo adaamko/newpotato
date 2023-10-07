@@ -1,0 +1,61 @@
+{
+    "name": "newpotato Dev Container",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+    "customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+			// Set default container specific settings.json values on container create.
+			"settings": {
+				"python.defaultInterpreterPath": "/usr/local/bin/python",
+				"python.analysis.typeCheckingMode": "basic",
+				"[python]": {
+					"editor.defaultFormatter": "ms-python.black-formatter",
+					"editor.formatOnSave": true,
+					"editor.codeActionsOnSave": {
+						"source.organizeImports": true
+					}
+				},
+				"black-formatter.args": [
+					"--line-length=100"
+				],
+				"isort.args": [
+					"-l",
+					"100",
+					"--profile",
+					"black",
+					"--skip-gitignore"
+				],
+				"files.watcherExclude": {
+					"_pycache_": true
+				},
+				"jupyter.interactiveWindowMode.creationMode": "single",
+				"jupyter.interactiveWindow.textEditor.executeSelection": true,
+				"jupyter.runStartupCommands": [
+					"%load_ext autoreload",
+					"%autoreload 2"
+				],
+				"python.testing.pytestEnabled": true,
+				"black-formatter.importStrategy": "fromEnvironment",
+				"autoDocstring.docstringFormat": "sphinx-notypes"
+			},
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"ms-python.python",
+				"eamodio.gitlens",
+				"ms-python.black-formatter",
+				"ms-python.isort",
+				"njpwerner.autodocstring",
+				"leonhard-s.python-sphinx-highlight"
+			]
+		}
+	},
+    "mounts": [
+        "source=${localWorkspaceFolder},target=/app,type=bind"
+    ],
+    "postCreateCommand": "pip install --no-cache-dir -e .",
+    "remoteUser": "vscode",
+    "shutdownAction": "stopContainer"
+}
