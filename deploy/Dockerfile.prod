@@ -4,13 +4,13 @@ FROM mcr.microsoft.com/vscode/devcontainers/python:3.11
 # Set the working directory inside the container
 WORKDIR /app
 
-# Install any global dependencies or tools you might need for development
+# Install any global dependencies here
 RUN apt-get update && apt-get install libleveldb-dev -y
 
-# Copy your project files into the container
+# Copy the project files into the container
 COPY . /app
 
-# Install your project's Python dependencies
+# Install the project's Python dependencies
 RUN pip install -e .
 
 # Expose the ports your app uses
