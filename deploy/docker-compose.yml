@@ -1,7 +1,9 @@
 version: '3'
 services:
   app:
-    build: .  # Path to the directory containing the Dockerfile
+    build: 
+      context: ../  # go up one directory to include the root
+      dockerfile: deploy/Dockerfile.prod  # specify the custom Dockerfile name here
     ports:
       - "8000:8000"
       - "8501:8501"
