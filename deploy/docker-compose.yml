@@ -1,0 +1,10 @@
+version: '3'
+services:
+  app:
+    build: 
+      context: ../  # go up one directory to include the root
+      dockerfile: deploy/Dockerfile.prod  # specify the custom Dockerfile name here
+    ports:
+      - "8000:8000"
+      - "8501:8501"
+    command: /bin/bash -c "uvicorn api.main:app --host 0.0.0.0 --reload & streamlit run frontend/app.py"

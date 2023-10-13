@@ -1,0 +1,17 @@
+# Use the specified base image
+FROM mcr.microsoft.com/vscode/devcontainers/python:3.11
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Install any global dependencies here
+RUN apt-get update && apt-get install libleveldb-dev -y
+
+# Copy the project files into the container
+COPY . /app
+
+# Install the project's Python dependencies
+RUN pip install -e .
+
+# Expose the ports your app uses
+EXPOSE 8000 8501
