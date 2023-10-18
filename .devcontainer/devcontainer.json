@@ -18,12 +18,8 @@
 						"source.organizeImports": true
 					}
 				},
-				"black-formatter.args": [
-					"--line-length=100"
-				],
+				"black-formatter.args": [],
 				"isort.args": [
-					"-l",
-					"100",
 					"--profile",
 					"black",
 					"--skip-gitignore"
