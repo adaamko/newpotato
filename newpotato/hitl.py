@@ -172,3 +172,19 @@ class HITLManager:
         assert self.is_parsed(text), f"unparsed text: {text}"
         logging.info(f"appending to triplets: {pred}, {args}")
         self.triplets[text].append((pred, args))
+
+    def classify(self, graph: Hyperedge) -> List[Dict[str, Any]]:
+        """
+        Classify the graph.
+
+        Args:
+            graph (Hyperedge): The graph to classify.
+
+        Returns:
+            List[Dict[str, Any]]: The matches in a format of [{"REL": "pred", "ARG1": "arg1", "ARG2": "arg2"}]
+        """
+        assert self.classifier is not None, "classifier not initialized"
+        matches = self.classifier.classify(graph)
+        logging.info(f"classifier matches: {matches}")
+
+        return matches

@@ -17,6 +17,28 @@ class NPTerminalClient:
     def clear_console(self):
         console.clear()
 
+    def classify(self):
+        if not self.hitl.get_rules():
+            console.print("[bold red]No rules extracted yet[/bold red]")
+            return
+        else:
+            console.print(
+                "[bold green]Classifying a sentence, please provide one:[/bold green]"
+            )
+            sen = input("> ")
+            graphs = self.parser.parse(sen)
+
+            main_graph = graphs[0]["main_edge"]
+
+            matches = self.hitl.classify(main_graph)
+
+            if not matches:
+                console.print("[bold red]No matches found[/bold red]")
+            else:
+                console.print("[bold green]Matches:[/bold green]")
+                for match in matches:
+                    console.print(match)
+
     def print_status(self):
         triplets = self.hitl.get_triplets()
 
@@ -89,7 +111,7 @@ class NPTerminalClient:
         while True:
             self.print_status()
             console.print(
-                "[bold cyan]Choose an action:\n\t(S)entence\n\t(A)nnotate\n\t(R)ules\n\t(C)lear\n\t(E)xit\n\t(H)elp[/bold cyan]\n"
+                "[bold cyan]Choose an action:\n\t(S)entence\n\t(A)nnotate\n\t(R)ules\n\t(I)nference\n\t(C)lear\n\t(E)xit\n\t(H)elp[/bold cyan]"
             )
             choice = input("> ").upper()
             if choice == "S":
@@ -98,6 +120,8 @@ class NPTerminalClient:
                 self.get_annotation()
             elif choice == "R":
                 self.print_rules()
+            elif choice == "I":
+                self.classify()
             elif choice == "C":
                 self.clear_console()
             elif choice == "E":
