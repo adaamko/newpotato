@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -31,13 +31,13 @@ class Annotation(BaseModel):
 
     Args:
         text (str): Text to be annotated.
-        pred (int): Predicate of the triplet.
-        args (List[int]): Arguments of the triplet.
+        pred Tuple[int, ...]: Predicate of the triplet.
+        args List[Tueple[int, ...]]: Arguments of the triplet.
     """
 
     text: str
-    pred: int
-    args: List[int] = Field(..., min_items=2)
+    pred: Tuple[int, ...]
+    args: List[Tuple[int, ...]] = Field(..., min_items=2)
 
 
 # Parsing Endpoints
