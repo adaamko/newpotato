@@ -6,10 +6,12 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastcoref import spacy_component
 import spacy
 
-from graphbrain.hyperedge import Hyperedge, hedge
+from graphbrain.hyperedge import Hyperedge
 from graphbrain.learner.classifier import Classifier
 from graphbrain.learner.rule import Rule
 from graphbrain.parsers import create_parser
+
+from newpotato.utils import get_variables
 
 
 @dataclass
@@ -140,18 +142,12 @@ class HITLManager:
             if text == "latest":
                 continue
             graphs = self.parsed_graphs[text]
+            words = [tok.text for tok in self.get_tokens(text)]
             for graph in graphs:
+                main_edge = graph["main_edge"]
                 annotated_graph = graph["main_edge"]
                 for triplet in triplets:
-                    pred, args = triplet
-                    pred_atom = graph["word2atom"][pred]
-                    args_atoms = [graph["word2atom"][arg] for arg in args]
-                    variables = {
-                        "REL": hedge(pred_atom),
-                        "ARG1": hedge(args_atoms[0]),
-                        "ARG2": hedge(args_atoms[1]),
-                    }
-
+                    variables = get_variables(main_edge, words, triplet)
                     # positive means whether we want to treat it as a positive or negative example
                     # this helps graphbrain to learn the rules
                     classifier.add_case(
@@ -179,14 +175,14 @@ class HITLManager:
         self.parsed_graphs["latest"] = parsed_graphs
         self.parsed_graphs[text] = parsed_graphs
 
-    def store_triplet(self, text: str, pred: int, args: List[int]):
+    def store_triplet(self, text: str, pred: Tuple[int, ...], args: List[Tuple[int, ...]]):
         """
         Store the triplet.
 
         Args:
             text (str): The text to store the triplet for.
-            pred (int): The predicate.
-            args (List[int]): The arguments.
+            pred (Tuple[int, ...]): The predicate.
+            args (List[Tuple[int, ...]]): The arguments.
         """
 
         if text == "latest":

@@ -72,8 +72,9 @@ class NPTerminalClient:
 
     def triplet_str(self, triplet, toks):
         pred, args = triplet
-        args_str = ", ".join(toks[a].text for a in args)
-        return f"{toks[pred]}({args_str})"
+        pred_phrase = "_".join(toks[a].text for a in pred)
+        args_str = ", ".join("_".join(toks[a].text for a in phrase) for phrase in args)
+        return f"{pred_phrase}({args_str})"
 
     def get_sentence(self):
         console.print("[bold cyan]Enter new sentence:[/bold cyan]")
@@ -89,8 +90,7 @@ class NPTerminalClient:
         while True:
             console.print(
                 """
-                [bold cyan]Enter comma-separated list of token IDs like this: PRED,ARG1,ARG2
-                (choose the most important word for each)
+                [bold cyan] Enter comma-separated list of predicate and args, with token IDs in each separated by underscores, e.g.: 0_The 1_boy 2_has 3_gone 4_to 5_school -> 2_3,0_1,4_5
                 Press enter to finish.
                 
                 [/bold cyan]"""
@@ -99,12 +99,15 @@ class NPTerminalClient:
             if annotation == "":
                 break
             try:
-                numbers = [int(n.strip()) for n in annotation.split(",")]
+                phrases = [
+                    tuple(int(n) for n in ids.split("_"))
+                    for ids in annotation.split(",")
+                ]
             except ValueError:
                 console.print("[bold red]Could not parse this:[/bold red]", annotation)
                 continue
 
-            pred, args = numbers[0], numbers[1:]
+            pred, args = phrases[0], phrases[1:]
             self.hitl.store_triplet("latest", pred, args)
 
     def run(self):
