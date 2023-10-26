@@ -9,8 +9,6 @@ from newpotato.hitl import HITLManager, TextParser
 # Initialize FastAPI, HITLManager and TextParser instances
 app = FastAPI()
 hitl_manager = HITLManager()
-parser = TextParser()
-
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
@@ -51,9 +49,7 @@ def parse_text(text_to_parse: TextToParse):
 
     logging.info("Initiating text parsing.")
     try:
-        parsed_graphs = parser.parse(text_to_parse.text)
-        for graph in parsed_graphs:
-            hitl_manager.store_parsed_graphs(graph["text"], [graph])
+        hitl_manager.add_text_to_graphs(text_to_parse.text)
         logging.info("Text parsing and storage successful.")
         return {"status": "ok"}
     except Exception as e:
@@ -150,8 +146,6 @@ def get_rules() -> Dict[str, Any]:
     """
     logging.info("Initiating rule extraction and retrieval.")
     try:
-        hitl_manager.annotate_graphs_with_triplets()
-        hitl_manager.extract_rules()
         rules = hitl_manager.get_rules()
         logging.info("Rule extraction and retrieval successful.")
         return {"rules": rules}
@@ -177,10 +171,10 @@ def get_annotated_graphs() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Sentence Classification Endpoints
-@app.post("/classify_sentence")
-def classify_sentence(text_to_classify: TextToParse) -> Dict[str, Any]:
-    """Classifies the sentence based on stored rules.
+# Text Classification Endpoints
+@app.post("/classify_text")
+def classify_text(text_to_classify: TextToParse) -> Dict[str, Any]:
+    """Classifies the text based on stored rules.
 
     Args:
         text_to_classify (TextToParse): Text to be classified.
@@ -188,16 +182,16 @@ def classify_sentence(text_to_classify: TextToParse) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Dictionary containing classification results.
     """
-    logging.info("Initiating sentence classification.")
+
+    logging.info("Initiating text classification.")
     try:
-        graphs = parser.parse(text_to_classify.text)
-        main_graph = graphs[0]["main_edge"]
-        matches = hitl_manager.classify(main_graph)
-        logging.info("Sentence classification successful.")
-        if not matches:
+        matches_by_text = hitl_manager.extract_triplets_from_text(text_to_classify.text)
+        logging.info("Text classification successful.")
+        if not matches_by_text:
             return {"status": "No matches found"}
         else:
-            return {"status": "ok", "matches": matches}
+            return {"status": "ok", "matches": matches_by_text}
+
     except Exception as e:
-        logging.error(f"Error in sentence classification: {e}")
+        logging.error(f"Error in text classification: {e}")
         raise HTTPException(status_code=500, detail=str(e))

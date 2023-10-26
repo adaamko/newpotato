@@ -247,7 +247,7 @@ def main():
         if st.button("Classify"):
             if sentence_to_classify:
                 payload = {"text": sentence_to_classify}
-                response = api_request("POST", "classify_sentence", payload)
+                response = api_request("POST", "classify_text", payload)
                 if response["status"] == "No matches found":
                     st.write("No matches found.")
                 else:
