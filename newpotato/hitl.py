@@ -16,8 +16,14 @@ from graphbrain.parsers import create_parser
 class TextParser:
     """A class to handle text parsing using Graphbrain."""
 
-    lang: str = "en"
-    parser: Optional[Any] = field(default=None, init=False)
+    def __init__(self, lang: str = "en", parser: Optional[Any] = None):
+        self.lang = lang
+        self.parser = parser
+
+        self.coref_nlp = spacy.load(
+            "en_core_web_sm", exclude=["parser", "lemmatizer", "ner", "textcat"]
+        )
+        self.coref_nlp.add_pipe("fastcoref")
 
     def resolve_coref(self, text: str) -> str:
         """
@@ -45,11 +51,6 @@ class TextParser:
         """
         if not self.parser:
             self.parser = create_parser(lang=self.lang)
-
-        self.coref_nlp = spacy.load(
-            "en_core_web_sm", exclude=["parser", "lemmatizer", "ner", "textcat"]
-        )
-        self.coref_nlp.add_pipe("fastcoref")
 
         paragraphs = text.split("\n\n")
         graphs = []
