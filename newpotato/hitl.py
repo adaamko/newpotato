@@ -6,8 +6,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import spacy
 from fastcoref import spacy_component
 from graphbrain.hyperedge import Hyperedge, hedge
-
-from graphbrain.hyperedge import Hyperedge
 from graphbrain.learner.classifier import Classifier
 from graphbrain.learner.rule import Rule
 from graphbrain.parsers import create_parser
@@ -116,7 +114,7 @@ class Extractor:
     def add_cases(
         self,
         parsed_graphs: Dict[str, List[Dict[str, Any]]],
-        text_to_triplets: Dict[str, List[Tuple]],
+        text_to_triplets: Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]],
     ):
         """
         Add cases to the classifier.
@@ -128,17 +126,11 @@ class Extractor:
         classifier = Classifier()
         for text, triplets in text_to_triplets.items():
             graphs = parsed_graphs[text]
+            words = [tok.text for tok in graphs[0]["spacy_sentence"]]
             for graph in graphs:
                 annotated_graph = graph["main_edge"]
                 for triplet in triplets:
-                    pred, args = triplet
-                    pred_atom = graph["word2atom"][pred]
-                    args_atoms = [graph["word2atom"][arg] for arg in args]
-                    variables = {
-                        "REL": hedge(pred_atom),
-                        "ARG1": hedge(args_atoms[0]),
-                        "ARG2": hedge(args_atoms[1]),
-                    }
+                    variables = get_variables(annotated_graph, words, triplet)
 
                     # positive means whether we want to treat it as a positive or negative example
                     # this helps graphbrain to learn the rules
@@ -182,7 +174,7 @@ class HITLManager:
     """
 
     parsed_graphs: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
-    triplets: Dict[str, List[Tuple]] = field(default_factory=lambda: defaultdict(list))
+    triplets: Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]] = field(default_factory=lambda: defaultdict(list))
     latest: Optional[str] = field(default=None)
     extractor: Extractor = field(default_factory=Extractor)
     text_parser: TextParser = field(default_factory=TextParser)
@@ -245,61 +237,17 @@ class HITLManager:
         """
         return [tok for tok in self.parsed_graphs[text][0]["spacy_sentence"]]
 
-    def get_triplets(self):
+    def get_triplets(self) -> Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]]:
         """
         Get the triplets.
+
+        Returns:
+            Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]]: The triplets.
         """
 
         return {
             sen: triplets for sen, triplets in self.triplets.items() if sen != "latest"
         }
-
-    def get_rules(self) -> List[Rule]:
-        """
-        Get the rules.
-        """
-        if self.classifier is None:
-            return []
-        return [rule.pattern for rule in self.classifier.rules]
-
-    def get_annotated_graphs(self) -> List[str]:
-        """
-        Get the annotated graphs.
-        """
-        assert self.classifier is not None, "classifier not initialized"
-        return [str(rule[0]) for rule in self.classifier.cases]
-
-    def annotate_graphs_with_triplets(self):
-        """
-        Annotate the graphs with the triplets.
-        This function iterates over the triplets and adds the cases to the classifier.
-        """
-        classifier = Classifier()
-        for text, triplets in self.triplets.items():
-            if text == "latest":
-                continue
-            graphs = self.parsed_graphs[text]
-            words = [tok.text for tok in self.get_tokens(text)]
-            for graph in graphs:
-                main_edge = graph["main_edge"]
-                annotated_graph = graph["main_edge"]
-                for triplet in triplets:
-                    variables = get_variables(main_edge, words, triplet)
-                    # positive means whether we want to treat it as a positive or negative example
-                    # this helps graphbrain to learn the rules
-                    classifier.add_case(
-                        annotated_graph, positive=True, variables=variables
-                    )
-
-        self.classifier = classifier
-
-    def extract_rules(self):
-        """
-        Extract the rules from the annotated graphs.
-        """
-        assert self.classifier is not None, "classifier not initialized"
-        # self.classifier.extract_patterns()
-        self.classifier.learn()
 
     def store_parsed_graphs(self, text: str, parsed_graphs: List[Dict[str, Any]]):
         """
