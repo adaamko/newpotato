@@ -32,7 +32,7 @@ class Annotation(BaseModel):
     Args:
         text (str): Text to be annotated.
         pred Tuple[int, ...]: Predicate of the triplet.
-        args List[Tueple[int, ...]]: Arguments of the triplet.
+        args List[Tuple[int, ...]]: Arguments of the triplet.
     """
 
     text: str
