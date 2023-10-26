@@ -19,7 +19,17 @@ class TextParser:
     lang: str = "en"
     parser: Optional[Any] = field(default=None, init=False)
 
-    def resolve_coref(self, text):
+    def resolve_coref(self, text: str) -> str:
+        """
+        Run coreference resolution and return text with resolved coreferences
+
+        Args:
+            text (str): The text to resolve
+
+        Returns:
+            str: The resolved text
+        """
+
         doc = self.coref_nlp(text, component_cfg={"fastcoref": {"resolve_text": True}})
         return doc._.resolved_text
 
