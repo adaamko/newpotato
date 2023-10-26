@@ -3,6 +3,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from fastcoref import spacy_component
+import spacy
+
 from graphbrain.hyperedge import Hyperedge, hedge
 from graphbrain.learner.classifier import Classifier
 from graphbrain.learner.rule import Rule
@@ -15,6 +18,10 @@ class TextParser:
 
     lang: str = "en"
     parser: Optional[Any] = field(default=None, init=False)
+
+    def resolve_coref(self, text):
+        doc = self.coref_nlp(text, component_cfg={"fastcoref": {"resolve_text": True}})
+        return doc._.resolved_text
 
     def parse(self, text: str) -> List[Dict[str, Any]]:
         """
@@ -29,11 +36,17 @@ class TextParser:
         if not self.parser:
             self.parser = create_parser(lang=self.lang)
 
+        self.coref_nlp = spacy.load(
+            "en_core_web_sm", exclude=["parser", "lemmatizer", "ner", "textcat"]
+        )
+        self.coref_nlp.add_pipe("fastcoref")
+
         paragraphs = text.split("\n\n")
         graphs = []
 
         for paragraph in paragraphs:
-            parses = self.parser.parse(paragraph)["parses"]
+            resolved_text = self.resolve_coref(paragraph)
+            parses = self.parser.parse(resolved_text)["parses"]
 
             # for each graph, add word2atom from atom2word
             # only storing the id of the word, not the word itself
@@ -141,7 +154,8 @@ class HITLManager:
         Extract the rules from the annotated graphs.
         """
         assert self.classifier is not None, "classifier not initialized"
-        self.classifier.extract_patterns()
+        # self.classifier.extract_patterns()
+        self.classifier.learn()
 
     def store_parsed_graphs(self, text: str, parsed_graphs: List[Dict[str, Any]]):
         """
