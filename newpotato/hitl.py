@@ -6,9 +6,13 @@ from typing import Any, Dict, List, Optional, Tuple
 import spacy
 from fastcoref import spacy_component
 from graphbrain.hyperedge import Hyperedge, hedge
+
+from graphbrain.hyperedge import Hyperedge
 from graphbrain.learner.classifier import Classifier
 from graphbrain.learner.rule import Rule
 from graphbrain.parsers import create_parser
+
+from newpotato.utils import get_variables
 
 
 @dataclass
@@ -250,6 +254,53 @@ class HITLManager:
             sen: triplets for sen, triplets in self.triplets.items() if sen != "latest"
         }
 
+    def get_rules(self) -> List[Rule]:
+        """
+        Get the rules.
+        """
+        if self.classifier is None:
+            return []
+        return [rule.pattern for rule in self.classifier.rules]
+
+    def get_annotated_graphs(self) -> List[str]:
+        """
+        Get the annotated graphs.
+        """
+        assert self.classifier is not None, "classifier not initialized"
+        return [str(rule[0]) for rule in self.classifier.cases]
+
+    def annotate_graphs_with_triplets(self):
+        """
+        Annotate the graphs with the triplets.
+        This function iterates over the triplets and adds the cases to the classifier.
+        """
+        classifier = Classifier()
+        for text, triplets in self.triplets.items():
+            if text == "latest":
+                continue
+            graphs = self.parsed_graphs[text]
+            words = [tok.text for tok in self.get_tokens(text)]
+            for graph in graphs:
+                main_edge = graph["main_edge"]
+                annotated_graph = graph["main_edge"]
+                for triplet in triplets:
+                    variables = get_variables(main_edge, words, triplet)
+                    # positive means whether we want to treat it as a positive or negative example
+                    # this helps graphbrain to learn the rules
+                    classifier.add_case(
+                        annotated_graph, positive=True, variables=variables
+                    )
+
+        self.classifier = classifier
+
+    def extract_rules(self):
+        """
+        Extract the rules from the annotated graphs.
+        """
+        assert self.classifier is not None, "classifier not initialized"
+        # self.classifier.extract_patterns()
+        self.classifier.learn()
+
     def store_parsed_graphs(self, text: str, parsed_graphs: List[Dict[str, Any]]):
         """
         Store the parsed graphs.
@@ -261,14 +312,14 @@ class HITLManager:
         self.parsed_graphs["latest"] = parsed_graphs
         self.parsed_graphs[text] = parsed_graphs
 
-    def store_triplet(self, text: str, pred: int, args: List[int]):
+    def store_triplet(self, text: str, pred: Tuple[int, ...], args: List[Tuple[int, ...]]):
         """
         Store the triplet.
 
         Args:
             text (str): The text to store the triplet for.
-            pred (int): The predicate.
-            args (List[int]): The arguments.
+            pred (Tuple[int, ...]): The predicate.
+            args (List[Tuple[int, ...]]): The arguments.
         """
 
         if text == "latest":

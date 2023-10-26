@@ -161,8 +161,10 @@ def annotate_sentence(selected_sentence: str):
 
         st.session_state["sentences_data"][selected_sentence]["annotations"].append(
             {
-                "pred": PREDS[0].split("_")[0],
-                "args": [ARG1[0].split("_")[0], ARG2[0].split("_")[0]],
+                "pred": tuple(tok.split("_")[0] for tok in PREDS),
+                "args": [
+                    tuple(tok.split("_")[0] for tok in arg) for arg in (ARG1, ARG2)
+                ],
             }
         )
 
