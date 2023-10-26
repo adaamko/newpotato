@@ -114,7 +114,9 @@ class Extractor:
     def add_cases(
         self,
         parsed_graphs: Dict[str, List[Dict[str, Any]]],
-        text_to_triplets: Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]],
+        text_to_triplets: Dict[
+            str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]
+        ],
     ):
         """
         Add cases to the classifier.
@@ -174,7 +176,9 @@ class HITLManager:
     """
 
     parsed_graphs: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
-    triplets: Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]] = field(default_factory=lambda: defaultdict(list))
+    triplets: Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
     latest: Optional[str] = field(default=None)
     extractor: Extractor = field(default_factory=Extractor)
     text_parser: TextParser = field(default_factory=TextParser)
@@ -237,7 +241,9 @@ class HITLManager:
         """
         return [tok for tok in self.parsed_graphs[text][0]["spacy_sentence"]]
 
-    def get_triplets(self) -> Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]]:
+    def get_triplets(
+        self,
+    ) -> Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]]:
         """
         Get the triplets.
 
@@ -260,7 +266,9 @@ class HITLManager:
         self.parsed_graphs["latest"] = parsed_graphs
         self.parsed_graphs[text] = parsed_graphs
 
-    def store_triplet(self, text: str, pred: Tuple[int, ...], args: List[Tuple[int, ...]]):
+    def store_triplet(
+        self, text: str, pred: Tuple[int, ...], args: List[Tuple[int, ...]]
+    ):
         """
         Store the triplet.
 

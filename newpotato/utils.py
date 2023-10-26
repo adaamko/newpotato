@@ -2,7 +2,6 @@ import logging
 from typing import List, Tuple
 
 import editdistance
-
 from graphbrain.hyperedge import Hyperedge
 
 
