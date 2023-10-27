@@ -1,7 +1,9 @@
 import json
+from collections import defaultdict
 
 import requests
 import streamlit as st
+from st_cytoscape import cytoscape
 from streamlit_text_annotation import text_annotation
 
 API_URL = "http://localhost:8000"
@@ -177,6 +179,8 @@ def main():
     if "sentences" not in st.session_state:
         st.session_state["sentences"] = []
         st.session_state["sentences_data"] = {}
+    if "knowledge_graph" not in st.session_state:
+        st.session_state["knowledge_graph"] = None
 
     home, add_sentence, annotate, view_rules, inference = st.tabs(
         ["Home", "Add Sentence", "Annotate", "View Rules", "Inference"]
@@ -244,20 +248,120 @@ def main():
                 st.write(rule)
 
     with inference:
-        sentence_to_classify = st.text_input("Enter a sentence to classify:")
+        sentence_to_classify = st.text_area("Text input", height=300)
 
         if st.button("Classify"):
-            if sentence_to_classify:
+            if sentence_to_classify.strip():
                 payload = {"text": sentence_to_classify}
-                response = api_request("POST", "classify_sentence", payload)
+                response = api_request("POST", "classify_text", payload)
                 if response["status"] == "No matches found":
                     st.write("No matches found.")
                 else:
-                    st.write("Matches:")
-                    for match in response["matches"]:
-                        st.write(match)
+                    text_to_matches = response["matches"]
+                    triplets_to_sentence_and_rule = defaultdict(list)
+
+                    for text, matches in text_to_matches.items():
+                        triplets = matches["matches"]
+                        rules = matches["rules_triggered"]
+
+                        for triplet in triplets:
+                            triplet_tuple = (
+                                triplet["REL"],
+                                triplet["ARG0"],
+                                triplet["ARG1"],
+                            )
+                            triplets_to_sentence_and_rule[triplet_tuple].append(
+                                (text, rules)
+                            )
+
+                    st.session_state["knowledge_graph"] = triplets_to_sentence_and_rule
+
             else:
                 st.write("Please enter a sentence to classify.")
+
+        if st.session_state["knowledge_graph"]:
+            st.write("Knowledge Graph")
+            # Use cytoscape to display the knowledge graph
+            # In the knowledge graph, the nodes are the ARG0, ARG1, the edges are the REL
+            # The edges will be selectable, and when selected, the sentences and rules that triggered the edge will be displayed
+
+            elements = []
+
+            unique_nodes = set()
+            for triplet, _ in st.session_state["knowledge_graph"].items():
+                unique_nodes.add(triplet[1])
+                unique_nodes.add(triplet[2])
+
+            # Add nodes
+            for node in unique_nodes:
+                elements.append(
+                    {
+                        "data": {"id": node, "label": node},
+                        "selectable": False,
+                    }
+                )
+
+            # Add edges
+            for triplet, _ in st.session_state["knowledge_graph"].items():
+                elements.append(
+                    {
+                        "data": {
+                            "id": f"{triplet[1]}-{triplet[0]}-{triplet[2]}",
+                            "label": triplet[0],
+                            "source": triplet[1],
+                            "target": triplet[2],
+                        },
+                        "selectable": True,
+                    }
+                )
+
+            stylesheet = [
+                {
+                    "selector": "node",
+                    "style": {"label": "data(id)", "width": 20, "height": 20},
+                },
+                {
+                    "selector": "edge",
+                    "style": {
+                        "label": "data(label)",
+                        "width": 3,
+                        "curve-style": "bezier",
+                        "target-arrow-shape": "triangle",
+                        "text-rotation": "autorotate",
+                        "text-margin-x": "1px",
+                        "text-margin-y": "-6px",
+                        "text-halign": "center",
+                        "text-valign": "center",
+                        "text-wrap": "wrap",
+                        "text-max-width": "200px",
+                    },
+                },
+            ]
+
+            selected = cytoscape(
+                elements,
+                stylesheet,
+                selection_type="single",
+                key="graph",
+                layout="dagre",
+            )
+
+            if selected:
+                edges = selected["edges"]
+                if edges:
+                    edge = edges[0].split("-")
+                    arg0 = edge[0]
+                    rel = edge[1]
+                    arg1 = edge[2]
+
+                    # Visualize it nicely what are the sentences and rules that triggered the edge
+                    st.write("Sentences and rules that triggered the edge:")
+                    for sentence, rules in st.session_state["knowledge_graph"][
+                        (rel, arg0, arg1)
+                    ]:
+                        st.write(sentence)
+                        for rule in rules:
+                            st.write(rule)
 
 
 if __name__ == "__main__":

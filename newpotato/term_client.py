@@ -30,7 +30,7 @@ class NPTerminalClient:
 
             main_graph = graphs[0]["main_edge"]
 
-            matches = self.hitl.classify(main_graph)
+            matches, _ = self.hitl.extractor.classify(main_graph)
 
             if not matches:
                 console.print("[bold red]No matches found[/bold red]")
@@ -45,9 +45,7 @@ class NPTerminalClient:
         self.print_triplets(triplets)
 
     def print_rules(self):
-        self.hitl.annotate_graphs_with_triplets()
         annotated_graphs = self.hitl.get_annotated_graphs()
-        self.hitl.extract_rules()
         rules = self.hitl.get_rules()
 
         console.print("[bold green]Annotated Graphs:[/bold green]")
@@ -71,7 +69,7 @@ class NPTerminalClient:
         console.print(table)
 
     def triplet_str(self, triplet, toks):
-        pred, args = triplet
+        pred, args = triplet.pred, triplet.args
         pred_phrase = "_".join(toks[a].text for a in pred)
         args_str = ", ".join("_".join(toks[a].text for a in phrase) for phrase in args)
         return f"{pred_phrase}({args_str})"
