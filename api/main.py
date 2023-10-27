@@ -191,7 +191,9 @@ def classify_text(text_to_classify: TextToParse) -> Dict[str, Any]:
 
     logging.info("Initiating text classification.")
     try:
-        matches_by_text = hitl_manager.extract_triplets_from_text(text_to_classify.text)
+        matches_by_text = hitl_manager.extract_triplets_from_text(
+            text_to_classify.text, convert_to_text=True
+        )
         logging.info("Text classification successful.")
         if not matches_by_text:
             return {"status": "No matches found"}

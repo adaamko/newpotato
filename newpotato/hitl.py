@@ -295,7 +295,9 @@ class HITLManager:
         logging.info(f"appending to triplets: {pred}, {args}")
         self.text_to_triplets[text].append(Triplet(pred, args))
 
-    def extract_triplets_from_text(self, text: str) -> Dict[str, Any]:
+    def extract_triplets_from_text(
+        self, text: str, convert_to_text: bool = False
+    ) -> Dict[str, Any]:
         """
         Extract the triplets from the given text with the Extractor.
         First the text is parsed into graphs, then the graphs are classified by the Extractor.
@@ -304,7 +306,7 @@ class HITLManager:
             text (str): The text to extract triplets from.
 
         Returns:
-            Dict[str, Any]: The matches in a format of {"text": [{"REL": "pred", "ARG1": "arg1", "ARG2": "arg2"}]}
+            Dict[str, Any]: The matches and rules triggered. The matches are a list of dicts, where each dict is a triplet. The rules triggered are a list of strings, where each string is a rule.
         """
 
         graphs = self.parse_text(text)
@@ -312,6 +314,12 @@ class HITLManager:
 
         for graph in graphs:
             matches, rules_triggered = self.extractor.classify(graph["main_edge"])
+            if convert_to_text:
+                matches = [
+                    {k: v.label() for k, v in match.items()} for match in matches
+                ]
+
+            logging.info(f"matches: {matches}")
 
             matches_by_text[graph["text"]]["matches"] = matches
             matches_by_text[graph["text"]]["rules_triggered"] = rules_triggered
