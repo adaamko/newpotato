@@ -11,7 +11,7 @@ from graphbrain.learner.rule import Rule
 from graphbrain.parsers import create_parser
 
 from newpotato.datatypes import GraphParse, Triplet
-from newpotato.utils import get_variables
+from newpotato.utils import get_variables, matches2triplets
 
 
 @dataclass
@@ -130,13 +130,13 @@ class Extractor:
             words = [tok.text for tok in graphs[0]["spacy_sentence"]]
             for graph in graphs:
                 annotated_graph = graph["main_edge"]
-                for triplet in triplets:
+                for triplet, positive in triplets:
                     variables = get_variables(annotated_graph, words, triplet)
 
                     # positive means whether we want to treat it as a positive or negative example
                     # this helps graphbrain to learn the rules
                     classifier.add_case(
-                        annotated_graph, positive=True, variables=variables
+                        annotated_graph, positive=positive, variables=variables
                     )
 
         self.classifier = classifier
@@ -153,6 +153,7 @@ class Extractor:
         """
         assert self.classifier is not None, "classifier not initialized"
         matches = self.classifier.classify(graph)
+        triplets = matches2triplets(matches, graph)
         rule_ids_triggered = self.classifier.rules_triggered(graph)
         rules_triggered = [
             str(self.classifier.rules[rule_id - 1].pattern)
@@ -160,6 +161,7 @@ class Extractor:
         ]
 
         logging.info(f"classifier matches: {matches}")
+        logging.info(f"inferred triplets: {triplets}")
         logging.info(f"classifier rules triggered: {rules_triggered}")
 
         return matches, rules_triggered
@@ -247,7 +249,7 @@ class HITLManager:
         """
         return [tok for tok in self.parsed_graphs[text][0]["spacy_sentence"]]
 
-    def get_triplets(
+    def get_true_triplets(
         self,
     ) -> Dict[str, List[Triplet]]:
         """
@@ -258,7 +260,7 @@ class HITLManager:
         """
 
         return {
-            sen: triplets
+            sen: [triplet for triplet, positive in triplets if positive is True]
             for sen, triplets in self.text_to_triplets.items()
             if sen != "latest"
         }
@@ -275,7 +277,11 @@ class HITLManager:
         self.parsed_graphs[text] = parsed_graphs
 
     def store_triplet(
-        self, text: str, pred: Tuple[int, ...], args: List[Tuple[int, ...]]
+        self,
+        text: str,
+        pred: Tuple[int, ...],
+        args: List[Tuple[int, ...]],
+        positive=True,
     ):
         """
         Store the triplet.
@@ -284,6 +290,8 @@ class HITLManager:
             text (str): The text to store the triplet for.
             pred (Tuple[int, ...]): The predicate.
             args (List[Tuple[int, ...]]): The arguments.
+            positive (bool): whether to store the triplet as a positive (default) or negative
+                example
         """
 
         if text == "latest":
@@ -293,7 +301,7 @@ class HITLManager:
             return self.store_triplet(self.latest, pred, args)
         assert self.is_parsed(text), f"unparsed text: {text}"
         logging.info(f"appending to triplets: {pred}, {args}")
-        self.text_to_triplets[text].append(Triplet(pred, args))
+        self.text_to_triplets[text].append((Triplet(pred, args), positive))
 
     def extract_triplets_from_text(
         self, text: str, convert_to_text: bool = False

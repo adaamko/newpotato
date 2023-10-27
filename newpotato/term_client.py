@@ -5,6 +5,7 @@ from rich.console import Console
 from rich.table import Table
 
 from newpotato.hitl import HITLManager, TextParser
+from newpotato.utils import matches2triplets
 
 console = Console()
 
@@ -17,6 +18,31 @@ class NPTerminalClient:
     def clear_console(self):
         console.clear()
 
+    def match_rules(self, sen):
+        graphs = self.parser.parse(sen)
+        main_graph = graphs[0]["main_edge"]
+        matches, _ = self.hitl.extractor.classify(main_graph)
+        return matches
+
+    def suggest_triplets(self):
+        for sen, edge in self.hitl.parsed_graphs.items():
+            if sen in self.hitl.text_to_triplets:
+                continue
+            toks = self.hitl.get_tokens(sen)
+            matches = self.match_rules(sen)
+            triplets = matches2triplets(matches, edge)
+            for triplet in triplets:
+                triplet_str = self.triplet_str(triplet, toks)
+                console.print("[bold yellow]How about this?[/bold yellow]")
+                console.print(f"[bold yellow]{sen}[/bold yellow]")
+                console.print(f"[bold yellow]{triplet_str}[/bold yellow]")
+                choice_str = None
+                while choice_str not in ("c", "i"):
+                    choice_str = input("(c)orrect or (i)ncorrect?")
+                positive = True if choice_str == "c" else False
+                pred, args = triplet
+                self.hitl.store_triplet(sen, pred, args, positive=positive)
+
     def classify(self):
         if not self.hitl.get_rules():
             console.print("[bold red]No rules extracted yet[/bold red]")
@@ -26,11 +52,8 @@ class NPTerminalClient:
                 "[bold green]Classifying a sentence, please provide one:[/bold green]"
             )
             sen = input("> ")
-            graphs = self.parser.parse(sen)
 
-            main_graph = graphs[0]["main_edge"]
-
-            matches, _ = self.hitl.extractor.classify(main_graph)
+            matches = self.match_rules(sen)
 
             if not matches:
                 console.print("[bold red]No matches found[/bold red]")
@@ -40,7 +63,7 @@ class NPTerminalClient:
                     console.print(match)
 
     def print_status(self):
-        triplets = self.hitl.get_triplets()
+        triplets = self.hitl.get_true_triplets()
 
         self.print_triplets(triplets)
 
@@ -121,6 +144,8 @@ class NPTerminalClient:
                 self.get_annotation()
             elif choice == "R":
                 self.print_rules()
+            elif choice == "T":
+                self.suggest_triplets()
             elif choice == "I":
                 self.classify()
             elif choice == "C":
@@ -133,6 +158,7 @@ class NPTerminalClient:
                     "[bold cyan]Help:[/bold cyan]\n"
                     + "\t(S)entence: Enter a new sentence to parse\n"
                     + "\t(A)nnotate: Annotate the latest sentence\n"
+                    + "\t(T)riplets: Suggest inferred triplets for sentences\n"
                     + "\t(R)ules: Extract rules from the annotated graphs\n"
                     + "\t(C)lear: Clear the console\n"
                     + "\t(E)xit: Exit the program\n"

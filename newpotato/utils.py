@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple
+from typing import List, Dict
 
 import editdistance
 from graphbrain.hyperedge import Hyperedge
@@ -74,3 +74,7 @@ def get_variables(
         }
     )
     return variables
+
+
+def matches2triplets(matches: List[Dict], edge: Hyperedge):
+    return matches  # TODO
