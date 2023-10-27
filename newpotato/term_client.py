@@ -30,7 +30,7 @@ class NPTerminalClient:
 
             main_graph = graphs[0]["main_edge"]
 
-            matches = self.hitl.extractor.classify(main_graph)
+            matches, _ = self.hitl.extractor.classify(main_graph)
 
             if not matches:
                 console.print("[bold red]No matches found[/bold red]")
@@ -69,7 +69,7 @@ class NPTerminalClient:
         console.print(table)
 
     def triplet_str(self, triplet, toks):
-        pred, args = triplet
+        pred, args = triplet.pred, triplet.args
         pred_phrase = "_".join(toks[a].text for a in pred)
         args_str = ", ".join("_".join(toks[a].text for a in phrase) for phrase in args)
         return f"{pred_phrase}({args_str})"

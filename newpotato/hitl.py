@@ -5,11 +5,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import spacy
 from fastcoref import spacy_component
-from graphbrain.hyperedge import Hyperedge, hedge
+from graphbrain.hyperedge import Hyperedge
 from graphbrain.learner.classifier import Classifier
 from graphbrain.learner.rule import Rule
 from graphbrain.parsers import create_parser
 
+from newpotato.datatypes import GraphParse, Triplet
 from newpotato.utils import get_variables
 
 
@@ -114,9 +115,7 @@ class Extractor:
     def add_cases(
         self,
         parsed_graphs: Dict[str, List[Dict[str, Any]]],
-        text_to_triplets: Dict[
-            str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]
-        ],
+        text_to_triplets: Dict[str, List[Triplet]],
     ):
         """
         Add cases to the classifier.
@@ -142,7 +141,7 @@ class Extractor:
 
         self.classifier = classifier
 
-    def classify(self, graph: Hyperedge) -> List[Dict[str, Any]]:
+    def classify(self, graph: Hyperedge) -> Tuple[List[Dict[str, Any]], List[str]]:
         """
         Classify the graph.
 
@@ -150,13 +149,20 @@ class Extractor:
             graph (Hyperedge): The graph to classify.
 
         Returns:
-            List[Dict[str, Any]]: The matches in a format of [{"REL": "pred", "ARG1": "arg1", "ARG2": "arg2"}]
+            Tuple[List[Dict[str, Any]], List[str]]: The matches and the rules triggered.
         """
         assert self.classifier is not None, "classifier not initialized"
         matches = self.classifier.classify(graph)
-        logging.info(f"classifier matches: {matches}")
+        rule_ids_triggered = self.classifier.rules_triggered(graph)
+        rules_triggered = [
+            str(self.classifier.rules[rule_id - 1].pattern)
+            for rule_id in rule_ids_triggered
+        ]
 
-        return matches
+        logging.info(f"classifier matches: {matches}")
+        logging.info(f"classifier rules triggered: {rules_triggered}")
+
+        return matches, rules_triggered
 
 
 @dataclass
@@ -176,7 +182,7 @@ class HITLManager:
     """
 
     parsed_graphs: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
-    triplets: Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]] = field(
+    text_to_triplets: Dict[str, List[Triplet]] = field(
         default_factory=lambda: defaultdict(list)
     )
     latest: Optional[str] = field(default=None)
@@ -210,7 +216,7 @@ class HITLManager:
         Get the annotated graphs.
         """
 
-        self.extractor.add_cases(self.parsed_graphs, self.triplets)
+        self.extractor.add_cases(self.parsed_graphs, self.text_to_triplets)
 
         return self.extractor.get_annotated_graphs_from_classifier()
 
@@ -243,16 +249,18 @@ class HITLManager:
 
     def get_triplets(
         self,
-    ) -> Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]]:
+    ) -> Dict[str, List[Triplet]]:
         """
-        Get the triplets.
+        Get the triplets, return everything except the latest triplets.
 
         Returns:
-            Dict[str, List[Tuple[Tuple[int, ...], List[Tuple[int, ...]]]]]: The triplets.
+            Dict[str, List[Triplet]]: The triplets.
         """
 
         return {
-            sen: triplets for sen, triplets in self.triplets.items() if sen != "latest"
+            sen: triplets
+            for sen, triplets in self.text_to_triplets.items()
+            if sen != "latest"
         }
 
     def store_parsed_graphs(self, text: str, parsed_graphs: List[Dict[str, Any]]):
@@ -285,7 +293,7 @@ class HITLManager:
             return self.store_triplet(self.latest, pred, args)
         assert self.is_parsed(text), f"unparsed text: {text}"
         logging.info(f"appending to triplets: {pred}, {args}")
-        self.triplets[text].append((pred, args))
+        self.text_to_triplets[text].append(Triplet(pred, args))
 
     def extract_triplets_from_text(self, text: str) -> Dict[str, Any]:
         """
@@ -300,10 +308,12 @@ class HITLManager:
         """
 
         graphs = self.parse_text(text)
-        matches_by_text = {}
+        matches_by_text = {graph["text"]: {} for graph in graphs}
 
         for graph in graphs:
-            matches = self.extractor.classify(graph["main_edge"])
-            matches_by_text[graph["text"]] = matches
+            matches, rules_triggered = self.extractor.classify(graph["main_edge"])
+
+            matches_by_text[graph["text"]]["matches"] = matches
+            matches_by_text[graph["text"]]["rules_triggered"] = rules_triggered
 
         return matches_by_text

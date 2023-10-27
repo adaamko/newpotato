@@ -1,12 +1,13 @@
 import logging
+from dataclasses import astuple
 from typing import Any, Dict, List, Tuple
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from newpotato.hitl import HITLManager, TextParser
+from newpotato.hitl import HITLManager
 
-# Initialize FastAPI, HITLManager and TextParser instances
+# Initialize FastAPI, HITLManager
 app = FastAPI()
 hitl_manager = HITLManager()
 # Set up logging
@@ -109,9 +110,14 @@ def get_triplets() -> Dict[str, Any]:
     """
     logging.info("Initiating triplet retrieval.")
     try:
-        triplets = hitl_manager.get_triplets()
+        sen_to_triplets = hitl_manager.get_triplets()
+        sen_to_triplets = {
+            sen: [astuple(triplet) for triplet in triplets]
+            for sen, triplets in sen_to_triplets.items()
+        }
+
         logging.info("Triplet retrieval successful.")
-        return {"triplets": triplets}
+        return {"triplets": sen_to_triplets}
     except Exception as e:
         logging.error(f"Error retrieving triplets: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -119,7 +125,7 @@ def get_triplets() -> Dict[str, Any]:
 
 # Sentence Retrieval Endpoints
 @app.get("/sentences")
-def get_sentences() -> Dict[str, Any]:
+def get_sentences() -> Dict[str, List[str]]:
     """Retrieves all parsed sentences.
 
     Returns:

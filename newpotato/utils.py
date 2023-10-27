@@ -4,6 +4,8 @@ from typing import List, Tuple
 import editdistance
 from graphbrain.hyperedge import Hyperedge
 
+from newpotato.datatypes import Triplet
+
 
 def _text2subedge(edge: Hyperedge, text: str):
     """
@@ -61,9 +63,9 @@ def phrase2text(phrase, words):
 def get_variables(
     edge: Hyperedge,
     words: List[str],
-    triplet: Tuple[Tuple[int, ...], List[Tuple[int, ...]]],
+    triplet: Triplet,
 ):
-    pred, args = triplet
+    pred, args = triplet.pred, triplet.args
     variables = {"REL": text2subedge(edge, phrase2text(pred, words))}
     variables.update(
         {

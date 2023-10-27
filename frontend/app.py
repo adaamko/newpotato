@@ -254,8 +254,7 @@ def main():
                     st.write("No matches found.")
                 else:
                     st.write("Matches:")
-                    for match in response["matches"]:
-                        st.write(match)
+                    st.write(response["matches"])
             else:
                 st.write("Please enter a sentence to classify.")
 
