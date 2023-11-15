@@ -78,7 +78,7 @@ class NPTerminalClient:
         console.print("[bold cyan]Enter new sentence:[/bold cyan]")
         sen = input("> ")
         graphs = self.parser.parse(sen)
-        self.hitl.store_parsed_graphs(sen, graphs)
+        self.hitl.store_parsed_graphs(sen, graphs[0])
 
     def get_annotation(self):
         tokens = self.hitl.get_tokens("latest")
