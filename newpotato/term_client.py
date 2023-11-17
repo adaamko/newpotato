@@ -18,19 +18,18 @@ class NPTerminalClient:
     def clear_console(self):
         console.clear()
 
-    def match_rules(self, sen):
-        graphs = self.parser.parse(sen)
+    def match_rules(self, sen, graphs):
         main_graph = graphs[0]["main_edge"]
         matches, _ = self.hitl.extractor.classify(main_graph)
         return matches
 
     def suggest_triplets(self):
-        for sen, edge in self.hitl.parsed_graphs.items():
+        for sen, graphs in self.hitl.parsed_graphs.items():
             if sen in self.hitl.text_to_triplets:
                 continue
             toks = self.hitl.get_tokens(sen)
-            matches = self.match_rules(sen)
-            triplets = matches2triplets(matches, edge)
+            matches = self.match_rules(sen, graphs)
+            triplets = matches2triplets(matches, graphs[0])
             for triplet in triplets:
                 triplet_str = self.triplet_str(triplet, toks)
                 console.print("[bold yellow]How about this?[/bold yellow]")
@@ -135,7 +134,7 @@ class NPTerminalClient:
         while True:
             self.print_status()
             console.print(
-                "[bold cyan]Choose an action:\n\t(S)entence\n\t(A)nnotate\n\t(R)ules\n\t(I)nference\n\t(C)lear\n\t(E)xit\n\t(H)elp[/bold cyan]"
+                "[bold cyan]Choose an action:\n\t(S)entence\n\t(A)nnotate\n\t(T)riplets\n\t(R)ules\n\t(I)nference\n\t(C)lear\n\t(E)xit\n\t(H)elp[/bold cyan]"
             )
             choice = input("> ").upper()
             if choice == "S":

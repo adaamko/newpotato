@@ -10,8 +10,8 @@ from graphbrain.learner.classifier import Classifier
 from graphbrain.learner.rule import Rule
 from graphbrain.parsers import create_parser
 
-from newpotato.datatypes import GraphParse, Triplet
-from newpotato.utils import get_variables, matches2triplets
+from newpotato.datatypes import Triplet
+from newpotato.utils import get_variables
 
 
 @dataclass
@@ -153,7 +153,6 @@ class Extractor:
         """
         assert self.classifier is not None, "classifier not initialized"
         matches = self.classifier.classify(graph)
-        triplets = matches2triplets(matches, graph)
         rule_ids_triggered = self.classifier.rules_triggered(graph)
         rules_triggered = [
             str(self.classifier.rules[rule_id - 1].pattern)
@@ -161,7 +160,6 @@ class Extractor:
         ]
 
         logging.info(f"classifier matches: {matches}")
-        logging.info(f"inferred triplets: {triplets}")
         logging.info(f"classifier rules triggered: {rules_triggered}")
 
         return matches, rules_triggered
