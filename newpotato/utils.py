@@ -2,7 +2,7 @@ import logging
 from typing import List, Dict, Any
 
 import editdistance
-from graphbrain.hyperedge import Hyperedge
+from graphbrain.hyperedge import Atom, Hyperedge
 
 from newpotato.datatypes import Triplet
 
@@ -68,10 +68,10 @@ def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
         Tuple[int, ...]: tuple of token IDs covered by the subedge
     """
 
-    print('atom2words:', graph["atom2word"])
-    print('key types:', [type(key) for key in graph["atom2word"]])
-    print('atom types:', [type(atom) for atom in edge.all_atoms()])
-    return tuple(graph["atom2word"][atom][1] for atom in edge.all_atoms())
+    # converting UniqueAtoms to Atoms so that edge atoms can match
+    atoms2toks = {Atom(atom): tok for atom, tok in graph["atom2word"].items()}
+
+    return tuple(atoms2toks[atom][1] for atom in edge.all_atoms())
 
 
 def phrase2text(phrase, words):

@@ -8,13 +8,14 @@ def test_subedge2toks():
     parser = TextParser()
     hitl = HITLManager()
     console = Console()
-    sen1 = "John loves Mary"
-    graphs1 = parser.parse(sen1)
-    hitl.store_parsed_graphs(sen1, graphs1)
+    text1 = "John loves Mary"
+    graph1 = parser.parse(text1)[0]
+    sen1 = graph1["text"]
+    hitl.store_parsed_graphs(sen1, graph1)
 
     pred, args = (1,), [(0,), (2,)]
     hitl.store_triplet(sen1, pred, args)
-    
+
     annotated_graphs = hitl.get_annotated_graphs()
     rules = hitl.get_rules()
 
@@ -24,13 +25,16 @@ def test_subedge2toks():
     console.print("[bold green]Extracted Rules:[/bold green]")
     console.print(rules)
 
-    sen2 = "Mary loves John"
-    graphs2 = parser.parse(sen2)
-    hitl.store_parsed_graphs(sen2, graphs2)
+    text2 = "Mary loves John"
+    graph2 = parser.parse(text2)[0]
+    sen2 = graph2["text"]
+    hitl.store_parsed_graphs(sen2, graph2)
 
-    matches, _ = hitl.extractor.classify(graphs2[0]['main_edge'])
-    triplets = matches2triplets(matches, graphs2[0])
-    print('triplets:', triplets)
+    matches, _ = hitl.extractor.classify(graph2["main_edge"])
+    triplets = matches2triplets(matches, graph2)
+    print("triplets:", triplets)
+    assert triplets[0].pred == (1,)
+    assert triplets[0].args == [(0,), (2,)]
 
 
 if __name__ == "__main__":

@@ -18,18 +18,18 @@ class NPTerminalClient:
     def clear_console(self):
         console.clear()
 
-    def match_rules(self, sen, graphs):
-        main_graph = graphs[0]["main_edge"]
+    def match_rules(self, sen, graph):
+        main_graph = graph["main_edge"]
         matches, _ = self.hitl.extractor.classify(main_graph)
         return matches
 
     def suggest_triplets(self):
-        for sen, graphs in self.hitl.parsed_graphs.items():
-            if sen in self.hitl.text_to_triplets:
+        for sen, graph in self.hitl.parsed_graphs.items():
+            if sen == "latest" or sen in self.hitl.text_to_triplets:
                 continue
             toks = self.hitl.get_tokens(sen)
-            matches = self.match_rules(sen, graphs)
-            triplets = matches2triplets(matches, graphs[0])
+            matches = self.match_rules(sen, graph)
+            triplets = matches2triplets(matches, graph)
             for triplet in triplets:
                 triplet_str = self.triplet_str(triplet, toks)
                 console.print("[bold yellow]How about this?[/bold yellow]")
@@ -39,7 +39,7 @@ class NPTerminalClient:
                 while choice_str not in ("c", "i"):
                     choice_str = input("(c)orrect or (i)ncorrect?")
                 positive = True if choice_str == "c" else False
-                pred, args = triplet
+                pred, args = triplet.pred, triplet.args
                 self.hitl.store_triplet(sen, pred, args, positive=positive)
 
     def classify(self):
@@ -137,7 +137,11 @@ class NPTerminalClient:
                 "[bold cyan]Choose an action:\n\t(S)entence\n\t(A)nnotate\n\t(T)riplets\n\t(R)ules\n\t(I)nference\n\t(C)lear\n\t(E)xit\n\t(H)elp[/bold cyan]"
             )
             choice = input("> ").upper()
-            if choice == "S":
+            if choice in ("T", "I") and self.hitl.extractor.classifier is None:
+                console.print(
+                    "[bold red]That choice requires a classifier, run (R)ules first![/bold red]"
+                )
+            elif choice == "S":
                 self.get_sentence()
             elif choice == "A":
                 self.get_annotation()
@@ -163,6 +167,7 @@ class NPTerminalClient:
                     + "\t(E)xit: Exit the program\n"
                     + "\t(H)elp: Show this help message\n"
                 )
+
             else:
                 console.print("[bold red]Invalid choice[/bold red]")
 

@@ -6,9 +6,9 @@ def test_parser():
         "It was a bright cold day in April, and the clocks were striking thirteen."
     )
     parser = TextParser()
-    graphs = parser.parse(input_text)
+    graph = parser.parse(input_text)[0]
     # assert parse_text(input_text) == {"status": "ok"}
-    return graphs
+    assert graph['text'] == input_text
 
 
 if __name__ == "__main__":
