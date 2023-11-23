@@ -114,7 +114,7 @@ class Extractor:
 
     def add_cases(
         self,
-        parsed_graphs: Dict[str, List[Dict[str, Any]]],
+        parsed_graphs: Dict[str, Dict[str, Any]],
         text_to_triplets: Dict[str, List[Triplet]],
     ):
         """
@@ -126,18 +126,16 @@ class Extractor:
         """
         classifier = Classifier()
         for text, triplets in text_to_triplets.items():
-            graphs = parsed_graphs[text]
-            words = [tok.text for tok in graphs[0]["spacy_sentence"]]
-            for graph in graphs:
-                annotated_graph = graph["main_edge"]
-                for triplet, positive in triplets:
-                    variables = get_variables(annotated_graph, words, triplet)
+            graph = parsed_graphs[text]
+            words = [tok.text for tok in graph["spacy_sentence"]]
+            annotated_graph = graph["main_edge"]
+            for triplet, positive in triplets:
+                print('triplet:', triplet)
+                variables = get_variables(annotated_graph, words, triplet)
 
-                    # positive means whether we want to treat it as a positive or negative example
-                    # this helps graphbrain to learn the rules
-                    classifier.add_case(
-                        annotated_graph, positive=positive, variables=variables
-                    )
+                # positive means whether we want to treat it as a positive or negative example
+                # this helps graphbrain to learn the rules
+                classifier.add_case(annotated_graph, positive=positive, variables=variables)
 
         self.classifier = classifier
 
@@ -170,7 +168,7 @@ class HITLManager:
     """A class to manage the HITL process and store parsed graphs.
 
     Attributes:
-        parsed_graphs (Dict[str, List[Dict[str, Any]]]): A dict mapping
+        parsed_graphs (Dict[str, Dict[str, Any]]): A dict mapping
             sentences to parsed graphs.
         annotated_graphs (Dict[str, List[Hyperedge]]): A dict mapping
             sentences to annotated graphs.
@@ -181,7 +179,7 @@ class HITLManager:
         text_parser (TextParser): The text parser that parses text into graphs.
     """
 
-    parsed_graphs: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    parsed_graphs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     text_to_triplets: Dict[str, List[Triplet]] = field(
         default_factory=lambda: defaultdict(list)
     )
@@ -232,7 +230,7 @@ class HITLManager:
         graphs = self.parse_text(text)
 
         for graph in graphs:
-            self.store_parsed_graphs(graph["text"], graphs)
+            self.store_parsed_graphs(graph["text"], graph)
 
     def is_parsed(self, text: str) -> bool:
         """
@@ -245,7 +243,7 @@ class HITLManager:
         """
         Get the tokens of the given text.
         """
-        return [tok for tok in self.parsed_graphs[text][0]["spacy_sentence"]]
+        return [tok for tok in self.parsed_graphs[text]["spacy_sentence"]]
 
     def get_true_triplets(
         self,
@@ -263,16 +261,17 @@ class HITLManager:
             if sen != "latest"
         }
 
-    def store_parsed_graphs(self, text: str, parsed_graphs: List[Dict[str, Any]]):
+    def store_parsed_graphs(self, text: str, graph: Dict[str, Any]) -> None:
         """
         Store the parsed graphs.
 
         Args:
-            parsed_graphs (List[Dict[str, Any]]): The parsed graphs to store.
+            text (str): The text to store the parsed graphs for.
+            graph (Dict[str, Any]): The parsed graph
         """
         self.latest = text
-        self.parsed_graphs["latest"] = parsed_graphs
-        self.parsed_graphs[text] = parsed_graphs
+        self.parsed_graphs["latest"] = graph
+        self.parsed_graphs[text] = graph
 
     def store_triplet(
         self,

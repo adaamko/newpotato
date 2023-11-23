@@ -171,8 +171,98 @@ def annotate_sentence(selected_sentence: str):
         )
 
 
+# Enhanced Cytoscape Graph Visualization Function
+def visualize_kg(knowledge_graph):
+    elements = []
+
+    unique_nodes = set()
+    for triplet, _ in knowledge_graph.items():
+        unique_nodes.add(triplet[1])
+        unique_nodes.add(triplet[2])
+
+    # Add nodes
+    for node in unique_nodes:
+        elements.append(
+            {
+                "data": {"id": node, "label": node},
+                "selectable": False,
+            }
+        )
+
+    # Add edges
+    for triplet, _ in knowledge_graph.items():
+        elements.append(
+            {
+                "data": {
+                    "id": f"{triplet[1]}-{triplet[0]}-{triplet[2]}",
+                    "label": triplet[0],
+                    "source": triplet[1],
+                    "target": triplet[2],
+                },
+                "selectable": True,
+            }
+        )
+
+    stylesheet = [
+        {
+            "selector": "node",
+            "style": {
+                "background-color": "#007bff",
+                "label": "data(id)",
+                "color": "#fff",
+                "text-valign": "center",
+                "text-halign": "center",
+                "font-size": "12px",
+                "width": "40px",
+                "height": "40px",
+                "border-color": "#fff",
+                "border-width": "2px",
+            },
+        },
+        {
+            "selector": "edge",
+            "style": {
+                "width": 3,
+                "line-color": "#00fa9a",
+                "target-arrow-color": "#00fa9a",
+                "target-arrow-shape": "triangle",
+                "curve-style": "bezier",
+                "label": "data(label)",
+                "font-size": "10px",
+                "color": "#000",
+                "text-background-opacity": 1,
+                "text-background-color": "#fff",
+                "text-background-padding": "3px",
+                "text-background-shape": "roundrectangle",
+            },
+        },
+    ]
+
+    selected = cytoscape(
+        elements,
+        stylesheet,
+        selection_type="single",
+        key="graph",
+        layout={"name": "klay"},
+    )
+
+    if selected:
+        edges = selected["edges"]
+        if edges:
+            edge_id = edges[0]  # Assuming single selection
+            arg0, rel, arg1 = edge_id.split("-")
+
+            # Display related information for the selected edge
+            st.write(f"Selected Edge: {rel} between {arg0} and {arg1}")
+            for sentence, rules in knowledge_graph[(rel, arg0, arg1)]:
+                st.write(f"Sentence: {sentence}")
+                for rule in rules:
+                    st.write(f"Rule: {rule}")
+
+
 def main():
     """Main function."""
+    st.set_page_config(page_title="NewPotato Streamlit App", layout="wide")
     st.title("NewPotato Streamlit App")
 
     # Initialize or get Streamlit state
@@ -285,83 +375,7 @@ def main():
             # In the knowledge graph, the nodes are the ARG0, ARG1, the edges are the REL
             # The edges will be selectable, and when selected, the sentences and rules that triggered the edge will be displayed
 
-            elements = []
-
-            unique_nodes = set()
-            for triplet, _ in st.session_state["knowledge_graph"].items():
-                unique_nodes.add(triplet[1])
-                unique_nodes.add(triplet[2])
-
-            # Add nodes
-            for node in unique_nodes:
-                elements.append(
-                    {
-                        "data": {"id": node, "label": node},
-                        "selectable": False,
-                    }
-                )
-
-            # Add edges
-            for triplet, _ in st.session_state["knowledge_graph"].items():
-                elements.append(
-                    {
-                        "data": {
-                            "id": f"{triplet[1]}-{triplet[0]}-{triplet[2]}",
-                            "label": triplet[0],
-                            "source": triplet[1],
-                            "target": triplet[2],
-                        },
-                        "selectable": True,
-                    }
-                )
-
-            stylesheet = [
-                {
-                    "selector": "node",
-                    "style": {"label": "data(id)", "width": 20, "height": 20},
-                },
-                {
-                    "selector": "edge",
-                    "style": {
-                        "label": "data(label)",
-                        "width": 3,
-                        "curve-style": "bezier",
-                        "target-arrow-shape": "triangle",
-                        "text-rotation": "autorotate",
-                        "text-margin-x": "1px",
-                        "text-margin-y": "-6px",
-                        "text-halign": "center",
-                        "text-valign": "center",
-                        "text-wrap": "wrap",
-                        "text-max-width": "200px",
-                    },
-                },
-            ]
-
-            selected = cytoscape(
-                elements,
-                stylesheet,
-                selection_type="single",
-                key="graph",
-                layout="dagre",
-            )
-
-            if selected:
-                edges = selected["edges"]
-                if edges:
-                    edge = edges[0].split("-")
-                    arg0 = edge[0]
-                    rel = edge[1]
-                    arg1 = edge[2]
-
-                    # Visualize it nicely what are the sentences and rules that triggered the edge
-                    st.write("Sentences and rules that triggered the edge:")
-                    for sentence, rules in st.session_state["knowledge_graph"][
-                        (rel, arg0, arg1)
-                    ]:
-                        st.write(sentence)
-                        for rule in rules:
-                            st.write(rule)
+            visualize_kg(st.session_state["knowledge_graph"])
 
 
 if __name__ == "__main__":
