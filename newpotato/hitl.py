@@ -130,12 +130,18 @@ class Extractor:
             words = [tok.text for tok in graph["spacy_sentence"]]
             annotated_graph = graph["main_edge"]
             for triplet, positive in triplets:
-                print('triplet:', triplet)
                 variables = get_variables(annotated_graph, words, triplet)
+                logging.info("adding case:")
+                logging.info(f"graph: {annotated_graph}")
+                logging.info(
+                    f"triplet: {triplet}, variables: {variables}, positive: {positive}"
+                )
 
                 # positive means whether we want to treat it as a positive or negative example
                 # this helps graphbrain to learn the rules
-                classifier.add_case(annotated_graph, positive=positive, variables=variables)
+                classifier.add_case(
+                    annotated_graph, positive=positive, variables=variables
+                )
 
         self.classifier = classifier
 
@@ -150,12 +156,17 @@ class Extractor:
             Tuple[List[Dict[str, Any]], List[str]]: The matches and the rules triggered.
         """
         assert self.classifier is not None, "classifier not initialized"
-        matches = self.classifier.classify(graph)
-        rule_ids_triggered = self.classifier.rules_triggered(graph)
-        rules_triggered = [
-            str(self.classifier.rules[rule_id - 1].pattern)
-            for rule_id in rule_ids_triggered
-        ]
+
+        try:
+            matches = self.classifier.classify(graph)
+            rule_ids_triggered = self.classifier.rules_triggered(graph)
+            rules_triggered = [
+                str(self.classifier.rules[rule_id - 1].pattern)
+                for rule_id in rule_ids_triggered
+            ]
+        except AttributeError as err:
+            logging.error(f"Graphbrain classifier threw exception:\n{err}")
+            matches, rules_triggered = [], []
 
         logging.info(f"classifier matches: {matches}")
         logging.info(f"classifier rules triggered: {rules_triggered}")

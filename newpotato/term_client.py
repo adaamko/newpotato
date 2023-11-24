@@ -89,6 +89,14 @@ class NPTerminalClient:
             table.add_row(sen, "\n".join(triplet_strs))
 
         console.print(table)
+    
+    def print_graphs(self):
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Sentence")
+        table.add_column("Graph")
+        for sen, graph in self.hitl.parsed_graphs.items():
+            table.add_row(sen, str(graph['main_edge']))
+        console.print(table)
 
     def triplet_str(self, triplet, toks):
         pred, args = triplet.pred, triplet.args
@@ -101,6 +109,17 @@ class NPTerminalClient:
         sen = input("> ")
         graphs = self.parser.parse(sen)
         self.hitl.store_parsed_graphs(sen, graphs[0])
+
+    def upload_sentence(self):
+        console.print("[bold cyan]Enter path of text file:[/bold cyan]")
+        fn = input("> ")
+        console.print("[bold cyan]Parsing text...[/bold cyan]")
+        with open(fn) as f:
+            graphs = self.parser.parse(f.read())
+        console.print("[bold cyan]Parsed {len(graphs)} sentences, storing graphs...[/bold cyan]")
+        for graph in graphs:
+            self.hitl.store_parsed_graphs(graph['text'], graph)
+        console.print("[bold cyan]Done![/bold cyan]")
 
     def get_annotation(self):
         tokens = self.hitl.get_tokens("latest")
@@ -134,7 +153,7 @@ class NPTerminalClient:
         while True:
             self.print_status()
             console.print(
-                "[bold cyan]Choose an action:\n\t(S)entence\n\t(A)nnotate\n\t(T)riplets\n\t(R)ules\n\t(I)nference\n\t(C)lear\n\t(E)xit\n\t(H)elp[/bold cyan]"
+                "[bold cyan]Choose an action:\n\t(S)entence\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(T)riplets\n\t(R)ules\n\t(I)nference\n\t(C)lear\n\t(E)xit\n\t(H)elp[/bold cyan]"
             )
             choice = input("> ").upper()
             if choice in ("T", "I") and self.hitl.extractor.classifier is None:
@@ -143,6 +162,10 @@ class NPTerminalClient:
                 )
             elif choice == "S":
                 self.get_sentence()
+            elif choice == "U":
+                self.upload_sentence()
+            elif choice == "G":
+                self.print_graphs()
             elif choice == "A":
                 self.get_annotation()
             elif choice == "R":
@@ -160,6 +183,8 @@ class NPTerminalClient:
                 console.print(
                     "[bold cyan]Help:[/bold cyan]\n"
                     + "\t(S)entence: Enter a new sentence to parse\n"
+                    + "\t(U)pload: Upload a file with input text\n"
+                    + "\t(G)raphs: Print graphs of parsed sentences\n"
                     + "\t(A)nnotate: Annotate the latest sentence\n"
                     + "\t(T)riplets: Suggest inferred triplets for sentences\n"
                     + "\t(R)ules: Extract rules from the annotated graphs\n"
@@ -177,7 +202,8 @@ def main():
         format="%(asctime)s : "
         + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s"
     )
-    logging.getLogger().setLevel(logging.INFO)
+    # logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
     client = NPTerminalClient()
     client.run()
 
