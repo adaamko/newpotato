@@ -1,8 +1,8 @@
 import logging
-from typing import List, Tuple
+from typing import List, Dict, Any
 
 import editdistance
-from graphbrain.hyperedge import Hyperedge
+from graphbrain.hyperedge import Atom, Hyperedge
 
 from newpotato.datatypes import Triplet
 
@@ -56,6 +56,24 @@ def text2subedge(edge: Hyperedge, text: str):
     return subedge
 
 
+def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
+    """
+    find IDs of tokens covered by an edge of a graph
+
+    Args:
+        edge (Hyperedge): the Graphbrain Hyperedge to be mapped to token IDs
+        graph (Dict[str, Any]): the Graphbrain Hypergraph of the full utterance
+
+    Returns:
+        Tuple[int, ...]: tuple of token IDs covered by the subedge
+    """
+
+    # converting UniqueAtoms to Atoms so that edge atoms can match
+    atoms2toks = {Atom(atom): tok for atom, tok in graph["atom2word"].items()}
+
+    return tuple(atoms2toks[atom][1] for atom in edge.all_atoms())
+
+
 def phrase2text(phrase, words):
     return " ".join(words[i] for i in phrase)
 
@@ -74,3 +92,19 @@ def get_variables(
         }
     )
     return variables
+
+
+def matches2triplets(matches: List[Dict], graph: Dict[str, Any]):
+    triplets = []
+    for triple_dict in matches:
+        pred = None
+        args = []
+        for key, edge in triple_dict.items():
+            if key == "REL":
+                pred = edge2toks(edge, graph)
+            else:
+                args.append(edge2toks(edge, graph))
+
+        triplets.append(Triplet(pred, args))
+
+    return triplets
