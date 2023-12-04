@@ -1,4 +1,6 @@
 import logging
+import random
+
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
@@ -238,10 +240,7 @@ class HITLManager:
         Returns:
             None
         """
-        graphs = self.parse_text(text)
-
-        for graph in graphs:
-            self.store_parsed_graphs(graph["text"], graph)
+        self.get_graphs(text)
 
     def is_parsed(self, text: str) -> bool:
         """
@@ -272,17 +271,24 @@ class HITLManager:
             if sen != "latest"
         }
 
-    def store_parsed_graphs(self, text: str, graph: Dict[str, Any]) -> None:
+    def get_graphs(self, text: str) -> List[Dict[str, Any]]:
         """
-        Store the parsed graphs.
+        Get graphs for text, parsing it if necessary
 
         Args:
-            text (str): The text to store the parsed graphs for.
-            graph (Dict[str, Any]): The parsed graph
+            text (str): the text to get the graphs for
+            graphs (List[Dict[str, Any]]): the graphs corresponding to the text
         """
-        self.latest = text
-        self.parsed_graphs["latest"] = graph
-        self.parsed_graphs[text] = graph
+        if text in self.parsed_graphs:
+            return [self.parsed_graphs[text]]
+
+        graphs = self.parse_text(text)
+        for graph in graphs:
+            self.latest = text
+            self.parsed_graphs[graph["text"]] = graph
+            self.parsed_graphs["latest"] = graph
+
+        return graphs
 
     def store_triplet(
         self,
@@ -311,6 +317,29 @@ class HITLManager:
         logging.info(f"appending to triplets: {pred}, {args}")
         self.text_to_triplets[text].append((Triplet(pred, args), positive))
 
+    def get_unannotated_sentences(self, max_sens=None, random_order=False):
+        n_graphs = len(self.parsed_graphs)
+        max_n = max_sens if max_sens is not None else n_graphs
+
+        if random_order:
+            random.seed()
+            logging.debug(f"sampling {max_n} indices from {n_graphs}")
+            indices = set(random.sample(range(n_graphs), max_n))
+            logging.debug(f"sample indices: {indices}")
+            yield from (
+                sen
+                for i, sen in enumerate(self.parsed_graphs.keys())
+                if i in indices and sen != "latest"
+            )
+        else:
+            yield from list(self.parsed_graphs.keys())[:max_n]
+
+    def match_rules(self, sen):
+        graph = self.parsed_graphs[sen]
+        main_graph = graph["main_edge"]
+        matches, _ = self.extractor.classify(main_graph)
+        return matches
+
     def extract_triplets_from_text(
         self, text: str, convert_to_text: bool = False
     ) -> Dict[str, Any]:
@@ -325,7 +354,7 @@ class HITLManager:
             Dict[str, Any]: The matches and rules triggered. The matches are a list of dicts, where each dict is a triplet. The rules triggered are a list of strings, where each string is a rule.
         """
 
-        graphs = self.parse_text(text)
+        graphs = self.get_graphs(text)
         matches_by_text = {graph["text"]: {} for graph in graphs}
 
         for graph in graphs:

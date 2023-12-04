@@ -3,6 +3,7 @@ import logging
 from rich import print
 from rich.console import Console
 from rich.table import Table
+from tqdm import tqdm
 
 from newpotato.hitl import HITLManager, TextParser
 from newpotato.utils import matches2triplets
@@ -18,17 +19,13 @@ class NPTerminalClient:
     def clear_console(self):
         console.clear()
 
-    def match_rules(self, sen, graph):
-        main_graph = graph["main_edge"]
-        matches, _ = self.hitl.extractor.classify(main_graph)
-        return matches
-
     def suggest_triplets(self):
-        for sen, graph in self.hitl.parsed_graphs.items():
+        for sen in self.hitl.get_unannotated_sentences():
             if sen == "latest" or sen in self.hitl.text_to_triplets:
                 continue
             toks = self.hitl.get_tokens(sen)
-            matches = self.match_rules(sen, graph)
+            matches = self.hitl.match_rules(sen)
+            graph = self.hitl.parsed_graphs[sen]
             triplets = matches2triplets(matches, graph)
             for triplet in triplets:
                 triplet_str = self.triplet_str(triplet, toks)
@@ -52,7 +49,7 @@ class NPTerminalClient:
             )
             sen = input("> ")
 
-            matches = self.match_rules(sen)
+            matches = self.hitl.match_rules(sen)
 
             if not matches:
                 console.print("[bold red]No matches found[/bold red]")
@@ -107,22 +104,24 @@ class NPTerminalClient:
     def get_sentence(self):
         console.print("[bold cyan]Enter new sentence:[/bold cyan]")
         sen = input("> ")
-        graphs = self.parser.parse(sen)
-        self.hitl.store_parsed_graphs(sen, graphs[0])
+        self.hitl.get_graphs(sen)
 
     def upload_sentence(self):
         console.print("[bold cyan]Enter path of text file:[/bold cyan]")
         fn = input("> ")
         console.print("[bold cyan]Parsing text...[/bold cyan]")
         with open(fn) as f:
-            graphs = self.parser.parse(f.read())
-        console.print("[bold cyan]Parsed {len(graphs)} sentences, storing graphs...[/bold cyan]")
-        for graph in graphs:
-            self.hitl.store_parsed_graphs(graph['text'], graph)
+            for line in tqdm(f):
+                self.hitl.get_graphs(line.strip())
         console.print("[bold cyan]Done![/bold cyan]")
 
-    def get_annotation(self):
-        tokens = self.hitl.get_tokens("latest")
+    def annotate(self):
+        for sen in self.hitl.get_unannotated_sentences(random_order=True, max_sens=3):
+            for pred, args in self.get_annotation_for_sen(sen):
+                self.hitl.store_triplet(sen, pred, args)
+
+    def get_annotation_for_sen(self, sentence):
+        tokens = self.hitl.get_tokens(sentence)
         console.print("[bold cyan]Tokens:[/bold cyan]")
         console.print(" ".join(f"{i}_{tok}" for i, tok in enumerate(tokens)))
 
@@ -147,7 +146,7 @@ class NPTerminalClient:
                 continue
 
             pred, args = phrases[0], phrases[1:]
-            self.hitl.store_triplet("latest", pred, args)
+            yield pred, args
 
     def run(self):
         while True:
@@ -167,7 +166,7 @@ class NPTerminalClient:
             elif choice == "G":
                 self.print_graphs()
             elif choice == "A":
-                self.get_annotation()
+                self.annotate()
             elif choice == "R":
                 self.print_rules()
             elif choice == "T":
