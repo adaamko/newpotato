@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 
+from graphbrain.hyperedge import hedge, Hyperedge
 
-@dataclass
-class GraphParse:
+
+class GraphParse(dict):
     """A class to handle Graphbrain graphs.
 
     A graphbrain parser result looks like this:
@@ -21,7 +22,23 @@ class GraphParse:
 
     """
 
-    pass
+    def to_json(self):
+        d = {}
+        for key, value in self.items():
+            new_value = value
+            if key in ('atom2token', 'atom2word'):
+                new_value = {k2.to_str(): v2 for k2, v2 in value.items()}
+            elif key == 'spacy_sentence':
+                new_value = value.as_doc().to_json()
+            elif isinstance(value, set):
+                new_value = list(value)
+            elif isinstance(value, Hyperedge):
+                new_value = value.to_str()
+            
+            d[key] = new_value
+
+        print('returning this:', d)
+        return d
 
 
 @dataclass
@@ -33,3 +50,6 @@ class Triplet:
 
     pred: Tuple[int, ...]
     args: List[Tuple[int, ...]]
+
+    def to_json(self):
+        return {"pred": self.pred, "args": self.args}

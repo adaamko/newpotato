@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
 
-from newpotato.hitl import HITLManager, TextParser
+from newpotato.hitl import HITLManager
 from newpotato.utils import matches2triplets
 
 console = Console()
@@ -13,8 +13,36 @@ console = Console()
 
 class NPTerminalClient:
     def __init__(self):
-        self.parser = TextParser()
         self.hitl = HITLManager()
+
+    def load_from_file(self):
+        while True:
+            console.print("[bold cyan]Enter path to HITL state file:[/bold cyan]")
+            fn = input("> ")
+            try:
+                hitl = HITLManager.load(fn)
+            except FileNotFoundError:
+                console.print(f"[bold red]No such file or directory: {fn}[/bold red]")
+            else:
+                self.hitl = hitl
+                console.print(
+                    f"[bold cyan]Successfully loaded HITL state from {fn}[/bold cyan]"
+                )
+                return
+
+    def write_to_file(self):
+        while True:
+            console.print("[bold cyan]Enter path to HITL state file:[/bold cyan]")
+            fn = input("> ")
+            try:
+                self.hitl.save(fn)
+            except FileNotFoundError:
+                console.print(f"[bold red] No such file or directory: {fn}[/bold red]")
+            else:
+                console.print(
+                    f"[bold cyan]Successfully saved HITL state to {fn}[/bold cyan]"
+                )
+                return
 
     def clear_console(self):
         console.clear()
@@ -86,13 +114,13 @@ class NPTerminalClient:
             table.add_row(sen, "\n".join(triplet_strs))
 
         console.print(table)
-    
+
     def print_graphs(self):
         table = Table(show_header=True, header_style="bold magenta")
         table.add_column("Sentence")
         table.add_column("Graph")
         for sen, graph in self.hitl.parsed_graphs.items():
-            table.add_row(sen, str(graph['main_edge']))
+            table.add_row(sen, str(graph["main_edge"]))
         console.print(table)
 
     def triplet_str(self, triplet, toks):
@@ -152,7 +180,7 @@ class NPTerminalClient:
         while True:
             self.print_status()
             console.print(
-                "[bold cyan]Choose an action:\n\t(S)entence\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(T)riplets\n\t(R)ules\n\t(I)nference\n\t(C)lear\n\t(E)xit\n\t(H)elp[/bold cyan]"
+                "[bold cyan]Choose an action:\n\t(S)entence\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(T)riplets\n\t(R)ules\n\t(I)nference\n\t(L)oad\n\t(W)rite\n\t(C)lear\n\t(E)xit\n\t(H)elp[/bold cyan]"
             )
             choice = input("> ").upper()
             if choice in ("T", "I") and self.hitl.extractor.classifier is None:
@@ -173,6 +201,10 @@ class NPTerminalClient:
                 self.suggest_triplets()
             elif choice == "I":
                 self.classify()
+            elif choice == "L":
+                self.load_from_file()
+            elif choice == "W":
+                self.write_to_file()
             elif choice == "C":
                 self.clear_console()
             elif choice == "E":
@@ -187,6 +219,8 @@ class NPTerminalClient:
                     + "\t(A)nnotate: Annotate the latest sentence\n"
                     + "\t(T)riplets: Suggest inferred triplets for sentences\n"
                     + "\t(R)ules: Extract rules from the annotated graphs\n"
+                    + "\t(L)oad: Load HITL state from file\n"
+                    + "\t(W)rite: Write HITL state to file\n"
                     + "\t(C)lear: Clear the console\n"
                     + "\t(E)xit: Exit the program\n"
                     + "\t(H)elp: Show this help message\n"
