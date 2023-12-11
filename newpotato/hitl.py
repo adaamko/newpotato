@@ -212,7 +212,8 @@ class HITLManager:
             triplets.
         latest (Optional[str]): The latest sentence.
         extractor (Extractor): The extractor that uses classifiers to extract triplets from graphs.
-        text_parser (TextParser): The text parser that parses text into graphs.
+        parser (TextParser): The text parser that parses text into graphs.
+        parser_params (Dict): parameters to be used to initialize a TextParser object
     """
 
     def __init__(
@@ -222,12 +223,24 @@ class HITLManager:
         latest=None,
         extractor_data=None,
         parser_params=None,
+        parser=None,
     ):
         self.parsed_graphs = {} if parsed_graphs is None else parsed_graphs
         self.text_to_triplets = defaultdict(list) if triplets is None else triplets
         self.latest = latest
-        self.extractor = Extractor(extractor_data)
-        self.text_parser = TextParser.from_params(parser_params)
+        
+        if extractor_data is None:
+            self.extractor = Extractor()
+        else:
+            self.extractor = Extractor.from_json(extractor_data)
+
+        if parser is None:
+            self.text_parser = TextParser.from_params(parser_params)
+        else:
+            assert (
+                parser_params is None
+            ), "parser and parser_params cannot both be specified"
+            self.text_parser = parser
 
     @staticmethod
     def load(fn):
@@ -236,8 +249,25 @@ class HITLManager:
         return HITLManager.from_json(data)
 
     @staticmethod
-    def from_json(hitl_data):
-        return HITLManager(**hitl_data)
+    def from_json(data):
+        parser = TextParser.from_params(data["parser_params"])
+        spacy_vocab = parser.parser.nlp.vocab
+        parsed_graphs = {
+            text: GraphParse.from_json(graph_dict, spacy_vocab)
+            for text, graph_dict in data["parsed_graphs"].items()
+        }
+        triplets = {
+            text: [(Triplet.from_json(triplet[0]), triplet[1]) for triplet in triplets]
+            for text, triplets in data["triplets"].items()
+        }
+
+        hitl = HITLManager(
+            parsed_graphs=parsed_graphs,
+            triplets=triplets,
+            extractor_data=data["extractor_data"],
+            parser=parser,
+        )
+        return hitl
 
     def to_json(self):
 
