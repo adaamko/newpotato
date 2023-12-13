@@ -137,8 +137,8 @@ class Extractor:
         Extract the rules from the annotated graphs.
         """
         assert self.classifier is not None, "classifier not initialized"
-        # self.classifier.extract_patterns()
-        self.classifier.learn()
+        self.classifier.extract_patterns()
+        # self.classifier.learn()
 
     def get_annotated_graphs_from_classifier(self) -> List[str]:
         """
