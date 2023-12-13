@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 
+from graphbrain.hyperedge import hedge
+from spacy.tokens.doc import Doc
 
-@dataclass
-class GraphParse:
+
+class GraphParse(dict):
     """A class to handle Graphbrain graphs.
 
     A graphbrain parser result looks like this:
@@ -21,7 +23,58 @@ class GraphParse:
 
     """
 
-    pass
+    @staticmethod
+    def get_atom2token(atom2word, spacy_sentence):
+        id2token = {tok.i: tok for tok in spacy_sentence}
+        atom2token = {hedge(atom): id2token[word[1]] for atom, word in atom2word.items()}
+        return atom2token
+
+    @staticmethod
+    def from_json(data, spacy_vocab):
+        graph = GraphParse()
+        spacy_sentence = Doc(spacy_vocab).from_json(data["spacy_sentence"])[:]
+        print("loaded spacy sentence:", spacy_sentence)
+
+        for key, value in data.items():
+            new_value = value
+            if key == "atom2token":
+                new_value = GraphParse.get_atom2token(data["atom2word"], spacy_sentence)
+            elif key == "atom2word":
+                new_value = {hedge(k2): tuple(v2) for k2, v2 in value.items()}
+            elif key == "word2atom":
+                new_value = {int(k2): v2 for k2, v2 in value.items()}
+            elif key == "spacy_sentence":
+                new_value = spacy_sentence
+            elif key == "extra_edges":
+                new_value = set(value)
+            elif key in ("main_edge", "resolved_corefs"):
+                new_value = hedge(value)
+
+            graph[key] = new_value
+
+        return graph
+
+    def to_json(self):
+        d = {}
+        for key, value in self.items():
+            new_value = value
+            if key == "atom2token":
+                # we cannot serialize spacy Tokens so we reconstruct them from atom2word
+                new_value = None
+            elif key == "atom2word":
+                new_value = {k2.to_str(): v2 for k2, v2 in value.items()}
+            elif key == "spacy_sentence":
+                new_value = value.as_doc().to_json()
+            elif key == "extra_edges":
+                # value is a set
+                new_value = sorted(list(value))
+            elif key in ("main_edge", "resolved_corefs"):
+                # values are Hyperedges:
+                new_value = value.to_str()
+
+            d[key] = new_value
+
+        return d
 
 
 @dataclass
@@ -33,3 +86,10 @@ class Triplet:
 
     pred: Tuple[int, ...]
     args: List[Tuple[int, ...]]
+
+    @staticmethod
+    def from_json(data):
+        return Triplet(data["pred"], data["args"])
+
+    def to_json(self):
+        return {"pred": self.pred, "args": self.args}

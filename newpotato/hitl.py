@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 
@@ -9,16 +10,24 @@ import spacy
 from fastcoref import spacy_component
 from graphbrain.hyperedge import Hyperedge
 from graphbrain.learner.classifier import Classifier
+from graphbrain.learner.classifier import from_json as classifier_from_json
 from graphbrain.learner.rule import Rule
 from graphbrain.parsers import create_parser
 
-from newpotato.datatypes import Triplet
+from newpotato.datatypes import GraphParse, Triplet
 from newpotato.utils import get_variables
 
 
 @dataclass
 class TextParser:
     """A class to handle text parsing using Graphbrain."""
+
+    @staticmethod
+    def from_params(params):
+        if params is None:
+            return TextParser()
+        else:
+            return TextParser(**params)
 
     def __init__(self, lang: str = "en", corefs: bool = True):
         self.lang = lang
@@ -30,6 +39,9 @@ class TextParser:
                 "en_core_web_sm", exclude=["parser", "lemmatizer", "ner", "textcat"]
             )
             self.coref_nlp.add_pipe("fastcoref")
+
+    def get_params(self):
+        return {"lang": self.lang, "corefs": self.corefs}
 
     def resolve_coref(self, text: str) -> str:
         """
@@ -87,6 +99,17 @@ class Extractor:
     """
 
     classifier: Optional[Classifier] = field(default=None)
+
+    @staticmethod
+    def from_json(classifier_data):
+        extractor = Extractor()
+        extractor.classifier = classifier_from_json(classifier_data)
+        return extractor
+
+    def to_json(self) -> Dict[str, List]:
+        if self.classifier is None:
+            return None
+        return self.classifier.to_json()
 
     def get_rules(self) -> List[Rule]:
         """
@@ -189,16 +212,80 @@ class HITLManager:
             triplets.
         latest (Optional[str]): The latest sentence.
         extractor (Extractor): The extractor that uses classifiers to extract triplets from graphs.
-        text_parser (TextParser): The text parser that parses text into graphs.
+        parser (TextParser): The text parser that parses text into graphs.
+        parser_params (Dict): parameters to be used to initialize a TextParser object
     """
 
-    parsed_graphs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    text_to_triplets: Dict[str, List[Triplet]] = field(
-        default_factory=lambda: defaultdict(list)
-    )
-    latest: Optional[str] = field(default=None)
-    extractor: Extractor = field(default_factory=Extractor)
-    text_parser: TextParser = field(default_factory=TextParser)
+    def __init__(
+        self,
+        parsed_graphs=None,
+        triplets=None,
+        latest=None,
+        extractor_data=None,
+        parser_params=None,
+        parser=None,
+    ):
+        self.parsed_graphs = {} if parsed_graphs is None else parsed_graphs
+        self.text_to_triplets = defaultdict(list) if triplets is None else triplets
+        self.latest = latest
+        
+        if extractor_data is None:
+            self.extractor = Extractor()
+        else:
+            self.extractor = Extractor.from_json(extractor_data)
+
+        if parser is None:
+            self.text_parser = TextParser.from_params(parser_params)
+        else:
+            assert (
+                parser_params is None
+            ), "parser and parser_params cannot both be specified"
+            self.text_parser = parser
+
+    @staticmethod
+    def load(fn):
+        with open(fn) as f:
+            data = json.load(f)
+        return HITLManager.from_json(data)
+
+    @staticmethod
+    def from_json(data):
+        parser = TextParser.from_params(data["parser_params"])
+        spacy_vocab = parser.parser.nlp.vocab
+        parsed_graphs = {
+            text: GraphParse.from_json(graph_dict, spacy_vocab)
+            for text, graph_dict in data["parsed_graphs"].items()
+        }
+        triplets = {
+            text: [(Triplet.from_json(triplet[0]), triplet[1]) for triplet in triplets]
+            for text, triplets in data["triplets"].items()
+        }
+
+        hitl = HITLManager(
+            parsed_graphs=parsed_graphs,
+            triplets=triplets,
+            extractor_data=data["extractor_data"],
+            parser=parser,
+        )
+        return hitl
+
+    def to_json(self):
+
+        return {
+            "parsed_graphs": {
+                text: graph.to_json() for text, graph in self.parsed_graphs.items()
+            },
+            "triplets": {
+                text: [(triplet[0].to_json(), triplet[1]) for triplet in triplets]
+                for text, triplets in self.text_to_triplets.items()
+            },
+            "extractor_data": self.extractor.to_json(),
+            "parser_params": self.text_parser.get_params(),
+        }
+
+    def save(self, fn):
+        with open(fn, "w") as f:
+            f.write(json.dumps(self.to_json()))
 
     def parse_text(self, text: str) -> List[Dict[str, Any]]:
         """
@@ -285,8 +372,8 @@ class HITLManager:
         graphs = self.parse_text(text)
         for graph in graphs:
             self.latest = text
-            self.parsed_graphs[graph["text"]] = graph
-            self.parsed_graphs["latest"] = graph
+            self.parsed_graphs[graph["text"]] = GraphParse(graph)
+            self.parsed_graphs["latest"] = GraphParse(graph)
 
         return graphs
 
@@ -319,7 +406,7 @@ class HITLManager:
 
     def get_unannotated_sentences(self, max_sens=None, random_order=False):
         n_graphs = len(self.parsed_graphs)
-        max_n = max_sens if max_sens is not None else n_graphs
+        max_n = min(max_sens, n_graphs) if max_sens is not None else n_graphs
 
         if random_order:
             random.seed()
