@@ -1,6 +1,7 @@
 import json
 import logging
 import random
+import re
 
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -16,6 +17,18 @@ from graphbrain.parsers import create_parser
 
 from newpotato.datatypes import GraphParse, Triplet
 from newpotato.utils import get_variables
+
+
+class AnnotatedWordsNotFoundError(Exception):
+    def __init__(self, words_txt, pattern, sen):
+
+        message = f'Words "{words_txt}" (pattern: "{pattern}") not found in sentence "{sen}"'
+        super().__init__(message)
+
+        # Now for your custom code...
+        self.words_txt = words_txt
+        self.sen = sen
+        self.pattern = pattern
 
 
 @dataclass
@@ -228,7 +241,7 @@ class HITLManager:
         self.parsed_graphs = {} if parsed_graphs is None else parsed_graphs
         self.text_to_triplets = defaultdict(list) if triplets is None else triplets
         self.latest = latest
-        
+
         if extractor_data is None:
             self.extractor = Extractor()
         else:
@@ -403,6 +416,66 @@ class HITLManager:
         assert self.is_parsed(text), f"unparsed text: {text}"
         logging.info(f"appending to triplets: {pred}, {args}")
         self.text_to_triplets[text].append((Triplet(pred, args), positive))
+
+    def store_triplets_from_annotation(self, data):
+        sen, triplets = self.get_triplets_from_annotation(data)
+        for pred, args in triplets:
+            self.store_triplet(sen, pred, args)
+
+    def get_triplets_from_annotation(self, data):
+        logging.debug(f"getting triplets from annotation: {data}")
+        graphs = self.get_graphs(data["sen"])
+        if len(graphs) > 1:
+            print("sentence split into two:", data["sen"])
+            print([graph["text"] for graph in graphs])
+            raise Exception()
+        sen = graphs[0]["text"]
+        triplets = []
+        for triplet in data["triplets"]:
+            try:
+                pred = self.get_toks_from_txt(triplet["rel"], sen)
+                args = [
+                    self.get_toks_from_txt(arg_txt, sen) for arg_txt in triplet["args"]
+                ]
+                triplets.append((pred, args))
+            except AnnotatedWordsNotFoundError as e:
+                logging.warning(f"skipping triplet: {e}")
+
+        return sen, triplets
+
+    def get_toks_from_txt(self, words_txt, sen):
+        logging.debug(f"words_txt: {words_txt}, sen: {sen}")
+
+        pattern = re.escape(re.sub("[()]", "", words_txt))
+        if pattern[0].isalpha():
+            pattern = r"\b" + pattern
+        if pattern[-1].isalpha():
+            pattern = pattern + r"\b"
+        m = re.search(pattern, sen, re.IGNORECASE)
+        
+        if m is None:
+            raise AnnotatedWordsNotFoundError(words_txt, pattern, sen)
+
+        start, end = m.span()
+        logging.debug(f"span: {(start, end)}")
+
+        tok_i, tok_j = None, None
+        tokens = self.get_tokens(sen)
+        for i, token in enumerate(tokens):
+            if token.idx == start:
+                tok_i = i
+            if token.idx > end:
+                tok_j = i
+                break
+        if tok_i is None:
+            logging.error(
+                f'left side of annotation "{words_txt}" does not match the left side of any token in sen "{sen}"'
+            )
+            raise Exception()
+        if tok_j is None:
+            tok_j = len(tokens)
+
+        return tuple(range(tok_i, tok_j))
 
     def get_unannotated_sentences(self, max_sens=None, random_order=False):
         n_graphs = len(self.parsed_graphs)
