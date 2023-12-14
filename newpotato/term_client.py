@@ -50,8 +50,6 @@ class NPTerminalClient:
 
     def suggest_triplets(self):
         for sen in self.hitl.get_unannotated_sentences():
-            if sen == "latest" or sen in self.hitl.text_to_triplets:
-                continue
             toks = self.hitl.get_tokens(sen)
             matches = self.hitl.match_rules(sen)
             graph = self.hitl.parsed_graphs[sen]

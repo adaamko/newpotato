@@ -22,10 +22,11 @@ from newpotato.utils import get_variables
 class AnnotatedWordsNotFoundError(Exception):
     def __init__(self, words_txt, pattern, sen):
 
-        message = f'Words "{words_txt}" (pattern: "{pattern}") not found in sentence "{sen}"'
+        message = (
+            f'Words "{words_txt}" (pattern: "{pattern}") not found in sentence "{sen}"'
+        )
         super().__init__(message)
 
-        # Now for your custom code...
         self.words_txt = words_txt
         self.sen = sen
         self.pattern = pattern
@@ -132,13 +133,15 @@ class Extractor:
             return []
         return [rule.pattern for rule in self.classifier.rules]
 
-    def extract_rules(self):
+    def extract_rules(self, learn=False):
         """
         Extract the rules from the annotated graphs.
         """
         assert self.classifier is not None, "classifier not initialized"
-        self.classifier.extract_patterns()
-        # self.classifier.learn()
+        if learn:
+            self.classifier.learn()
+        else:
+            self.classifier.extract_patterns()
 
     def get_annotated_graphs_from_classifier(self) -> List[str]:
         """
@@ -239,7 +242,9 @@ class HITLManager:
         parser=None,
     ):
         self.parsed_graphs = {} if parsed_graphs is None else parsed_graphs
-        self.text_to_triplets = defaultdict(list) if triplets is None else triplets
+        self.text_to_triplets = (
+            defaultdict(list) if triplets is None else defaultdict(list, triplets)
+        )
         self.latest = latest
 
         if extractor_data is None:
@@ -263,6 +268,15 @@ class HITLManager:
 
     @staticmethod
     def from_json(data):
+        """
+        load HITLManager from saved state
+
+        Args:
+            data (dict): the saved state, as returned by the to_json function
+
+        Returns:
+            HITLManager: a new HITLManager object with the restored state
+        """
         parser = TextParser.from_params(data["parser_params"])
         spacy_vocab = parser.parser.nlp.vocab
         parsed_graphs = {
@@ -283,6 +297,13 @@ class HITLManager:
         return hitl
 
     def to_json(self):
+        """
+        get the state of the HITLManager so that it can be saved
+
+        Returns:
+            dict: a dict with all the HITLManager object's attributes that are relevant to
+                its state
+        """
 
         return {
             "parsed_graphs": {
@@ -297,6 +318,12 @@ class HITLManager:
         }
 
     def save(self, fn):
+        """
+        save HITLManager state to a file
+
+        Args:
+            fn (str): path of the file to be written (will be overwritten if it exists)
+        """
         with open(fn, "w") as f:
             f.write(json.dumps(self.to_json()))
 
@@ -312,13 +339,17 @@ class HITLManager:
         """
         return self.text_parser.parse(text)
 
-    def get_rules(self) -> List[Rule]:
+    def get_rules(self, learn=False) -> List[Rule]:
         """
         Get the rules.
+
+        Args:
+            learn (bool): whether to run graphbrain classifier's learn function.
+                If False (default), only extract_patterns is called
         """
 
         _ = self.get_annotated_graphs()
-        self.extractor.extract_rules()
+        self.extractor.extract_rules(learn=learn)
 
         return self.extractor.get_rules()
 
@@ -418,11 +449,30 @@ class HITLManager:
         self.text_to_triplets[text].append((Triplet(pred, args), positive))
 
     def store_triplets_from_annotation(self, data):
+        """
+        Store triplets from annotation.
+
+        Args:
+            data (dict): A dictionary with the keys "sen" and "triplets".
+                Triplet annotations must be provided as a list of dictionaries with the keys
+                "rel" and "args", each of which must be a substring of the sentence.
+        """
         sen, triplets = self.get_triplets_from_annotation(data)
         for pred, args in triplets:
             self.store_triplet(sen, pred, args)
 
     def get_triplets_from_annotation(self, data):
+        """
+        Get annotated triplets.
+
+        Args:
+            data (dict): A dictionary with the keys "sen" and "triplets".
+                Triplet annotations must be provided as a list of dictionaries with the keys
+                "rel" and "args", each of which must be a substring of the sentence.
+        Returns:
+            Tuple[str, List[Tuple[Tuple, List[Tuple]]]: the sentence (after parsing)
+                and the list of triplets, as required by store_triplet
+        """
         logging.debug(f"getting triplets from annotation: {data}")
         graphs = self.get_graphs(data["sen"])
         if len(graphs) > 1:
@@ -444,6 +494,17 @@ class HITLManager:
         return sen, triplets
 
     def get_toks_from_txt(self, words_txt, sen):
+        """
+        Map a substring of a sentence to its tokens. Used to parse annotations of triplets
+        provided as plain text strings of the predicate and the arguments
+
+        Args:
+            words_txt (str): the substring of the sentence
+            sen (str): the sentence
+
+        Returns:
+            Tuple[int, ...] the tokens of the sentence corresponding to the substring
+        """
         logging.debug(f"words_txt: {words_txt}, sen: {sen}")
 
         pattern = re.escape(re.sub("[()]", "", words_txt))
@@ -452,7 +513,7 @@ class HITLManager:
         if pattern[-1].isalpha():
             pattern = pattern + r"\b"
         m = re.search(pattern, sen, re.IGNORECASE)
-        
+
         if m is None:
             raise AnnotatedWordsNotFoundError(words_txt, pattern, sen)
 
@@ -478,7 +539,26 @@ class HITLManager:
         return tuple(range(tok_i, tok_j))
 
     def get_unannotated_sentences(self, max_sens=None, random_order=False):
-        n_graphs = len(self.parsed_graphs)
+        """
+        get a list of sentences that have been added and parsed but not yet annotated
+
+        Args:
+            max_sens (int): the maximum number of sentences to return. If None (this is the
+                default) or larger than the total number of unannotated sentences, all
+                unannotated sentences are returned
+            random_order (bool): if False (default), sentences are yielded in the order of
+                the self.parsed_graphs dict, which is always the same. If True, a random
+                sample is generated, with a new random seed on each function call.
+
+        Returns:
+            Generator[str] the unannotated sentences
+        """
+        sens = [
+            sen
+            for sen in self.parsed_graphs
+            if sen != "latest" and sen not in self.text_to_triplets
+        ]
+        n_graphs = len(sens)
         max_n = min(max_sens, n_graphs) if max_sens is not None else n_graphs
 
         if random_order:
@@ -487,12 +567,10 @@ class HITLManager:
             indices = set(random.sample(range(n_graphs), max_n))
             logging.debug(f"sample indices: {indices}")
             yield from (
-                sen
-                for i, sen in enumerate(self.parsed_graphs.keys())
-                if i in indices and sen != "latest"
+                sen for i, sen in enumerate(sens) if i in indices and sen != "latest"
             )
         else:
-            yield from list(self.parsed_graphs.keys())[:max_n]
+            yield from sens[:max_n]
 
     def match_rules(self, sen):
         graph = self.parsed_graphs[sen]
