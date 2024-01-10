@@ -5,7 +5,7 @@ import re
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Generator
 
 import spacy
 from fastcoref import spacy_component
@@ -18,10 +18,11 @@ from graphbrain.parsers import create_parser
 from newpotato.datatypes import GraphParse, Triplet
 from newpotato.utils import get_variables
 
+assert spacy_component  # silence flake8
+
 
 class AnnotatedWordsNotFoundError(Exception):
     def __init__(self, words_txt, pattern, sen):
-
         message = (
             f'Words "{words_txt}" (pattern: "{pattern}") not found in sentence "{sen}"'
         )
@@ -37,7 +38,7 @@ class TextParser:
     """A class to handle text parsing using Graphbrain."""
 
     @staticmethod
-    def from_params(params):
+    def from_params(params: Dict[str, Any]):
         if params is None:
             return TextParser()
         else:
@@ -54,7 +55,7 @@ class TextParser:
             )
             self.coref_nlp.add_pipe("fastcoref")
 
-    def get_params(self):
+    def get_params(self) -> Dict[str, Any]:
         return {"lang": self.lang, "corefs": self.corefs}
 
     def resolve_coref(self, text: str) -> str:
@@ -115,7 +116,7 @@ class Extractor:
     classifier: Optional[Classifier] = field(default=None)
 
     @staticmethod
-    def from_json(classifier_data):
+    def from_json(classifier_data: Dict[str, Any]):
         extractor = Extractor()
         extractor.classifier = classifier_from_json(classifier_data)
         return extractor
@@ -133,7 +134,7 @@ class Extractor:
             return []
         return [rule.pattern for rule in self.classifier.rules]
 
-    def extract_rules(self, learn=False):
+    def extract_rules(self, learn: bool = False):
         """
         Extract the rules from the annotated graphs.
         """
@@ -162,7 +163,7 @@ class Extractor:
         Add cases to the classifier.
 
         Args:
-            parsed_graphs (List[Dict[str, Any]]): The parsed graphs.
+            parsed_graphs (Dict[str, Dict[str, Any]]): The parsed graphs.
             triplets (List[Tuple]): The triplets.
         """
         classifier = Classifier()
@@ -234,12 +235,12 @@ class HITLManager:
 
     def __init__(
         self,
-        parsed_graphs=None,
-        triplets=None,
-        latest=None,
-        extractor_data=None,
-        parser_params=None,
-        parser=None,
+        parsed_graphs: Dict[str, Dict[str, Any]] = None,
+        triplets: Dict[str, List[Tuple]] = None,
+        latest: Optional[str] = None,
+        extractor_data: Optional[Extractor] = None,
+        parser_params: Optional[Dict[str, Any]] = None,
+        parser: Optional[TextParser] = None,
     ):
         self.parsed_graphs = {} if parsed_graphs is None else parsed_graphs
         self.text_to_triplets = (
@@ -267,7 +268,7 @@ class HITLManager:
         return HITLManager.from_json(data)
 
     @staticmethod
-    def from_json(data):
+    def from_json(data: Dict[str, Any]):
         """
         load HITLManager from saved state
 
@@ -296,7 +297,7 @@ class HITLManager:
         )
         return hitl
 
-    def to_json(self):
+    def to_json(self) -> Dict[str, Any]:
         """
         get the state of the HITLManager so that it can be saved
 
@@ -317,7 +318,7 @@ class HITLManager:
             "parser_params": self.text_parser.get_params(),
         }
 
-    def save(self, fn):
+    def save(self, fn: str):
         """
         save HITLManager state to a file
 
@@ -339,7 +340,7 @@ class HITLManager:
         """
         return self.text_parser.parse(text)
 
-    def get_rules(self, learn=False) -> List[Rule]:
+    def get_rules(self, learn: bool = False) -> List[Rule]:
         """
         Get the rules.
 
@@ -386,9 +387,7 @@ class HITLManager:
         """
         return [tok for tok in self.parsed_graphs[text]["spacy_sentence"]]
 
-    def get_true_triplets(
-        self,
-    ) -> Dict[str, List[Triplet]]:
+    def get_true_triplets(self) -> Dict[str, List[Triplet]]:
         """
         Get the triplets, return everything except the latest triplets.
 
@@ -448,7 +447,7 @@ class HITLManager:
         logging.info(f"appending to triplets: {pred}, {args}")
         self.text_to_triplets[text].append((Triplet(pred, args), positive))
 
-    def store_triplets_from_annotation(self, data):
+    def store_triplets_from_annotation(self, data: Dict[str, Any]):
         """
         Store triplets from annotation.
 
@@ -461,7 +460,7 @@ class HITLManager:
         for pred, args in triplets:
             self.store_triplet(sen, pred, args)
 
-    def get_triplets_from_annotation(self, data):
+    def get_triplets_from_annotation(self, data: Dict[str, Any]):
         """
         Get annotated triplets.
 
@@ -493,7 +492,7 @@ class HITLManager:
 
         return sen, triplets
 
-    def get_toks_from_txt(self, words_txt, sen):
+    def get_toks_from_txt(self, words_txt: str, sen: str) -> Tuple[int, ...]:
         """
         Map a substring of a sentence to its tokens. Used to parse annotations of triplets
         provided as plain text strings of the predicate and the arguments
@@ -538,7 +537,9 @@ class HITLManager:
 
         return tuple(range(tok_i, tok_j))
 
-    def get_unannotated_sentences(self, max_sens=None, random_order=False):
+    def get_unannotated_sentences(
+        self, max_sens: Optional[int] = None, random_order: bool = False
+    ) -> Generator[str]:
         """
         get a list of sentences that have been added and parsed but not yet annotated
 
@@ -572,7 +573,16 @@ class HITLManager:
         else:
             yield from sens[:max_n]
 
-    def match_rules(self, sen):
+    def match_rules(self, sen: str) -> List[Dict]:
+        """
+        match rules against sentence by passing the sentence's graph to the extractor
+
+        Args:
+            sen (str): the sentence to be matched against
+
+        Returns:
+            List[Dict] a list of hypergraphs corresponding to the matches
+        """
         graph = self.parsed_graphs[sen]
         main_graph = graph["main_edge"]
         matches, _ = self.extractor.classify(main_graph)
