@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 import editdistance
 from graphbrain.hyperedge import Atom, Hyperedge
@@ -7,7 +7,7 @@ from graphbrain.hyperedge import Atom, Hyperedge
 from newpotato.datatypes import Triplet
 
 
-def _text2subedge(edge: Hyperedge, text: str):
+def _text2subedge(edge: Hyperedge, text: str) -> Tuple[Hyperedge, int, int]:
     """
     find subedge in edge corresponding to the phrase in text. Based on graphbrain.learner.text2subedge.
 
@@ -40,7 +40,7 @@ def _text2subedge(edge: Hyperedge, text: str):
     return best_edge, best_distance, best_length
 
 
-def text2subedge(edge: Hyperedge, text: str):
+def text2subedge(edge: Hyperedge, text: str) -> Hyperedge:
     """
     find subedge in edge corresponding to the phrase in text. Based on graphbrain.learner.text2subedge.
 
@@ -74,15 +74,22 @@ def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
     return tuple(atoms2toks[atom][1] for atom in edge.all_atoms())
 
 
-def phrase2text(phrase, words):
-    return " ".join(words[i] for i in phrase)
+def get_variables(edge: Hyperedge, words: List[str], triplet: Triplet) -> Dict[str, Hyperedge]:
+    """
+    get the variables from a hypergraph that correspond to parts of a triplet
 
+    Args:
+        edge (Hyperedge): the graph containing the variables
+        words (List[str]): the words of the sentence
+        triplet (Triplet): the triplet for which the variables are to be extracted
 
-def get_variables(
-    edge: Hyperedge,
-    words: List[str],
-    triplet: Triplet,
-):
+    Returns:
+        Dict[str, Hyperedge] the dictionary of variables
+    """
+
+    def phrase2text(phrase, words):
+        return " ".join(words[i] for i in phrase)
+
     pred, args = triplet.pred, triplet.args
     variables = {"REL": text2subedge(edge, phrase2text(pred, words))}
     variables.update(
@@ -94,7 +101,17 @@ def get_variables(
     return variables
 
 
-def matches2triplets(matches: List[Dict], graph: Dict[str, Any]):
+def matches2triplets(matches: List[Dict], graph: Dict[str, Any]) -> List[Triplet]:
+    """
+    convert graphbrain matches on a sentence to triplets of the tokens of the sentence
+
+    Args:
+        matches (List[Dict]): a list of hypergraphs corresponding to the matches
+        graphs (Dict[str, Any]]): The hypergraph of the sentence
+    
+    Returns:
+        List[Triplet] the list of triplets corresponding to the matches
+    """
     triplets = []
     for triple_dict in matches:
         pred = None

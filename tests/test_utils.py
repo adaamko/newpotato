@@ -13,7 +13,7 @@ def test_subedge2toks():
     hitl.store_triplet(sen1, pred, args)
 
     annotated_graphs = hitl.get_annotated_graphs()
-    rules = hitl.get_rules()
+    rules = hitl.get_rules(learn=True)
 
     console.print("[bold green]Annotated Graphs:[/bold green]")
     console.print(annotated_graphs)

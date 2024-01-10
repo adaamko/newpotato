@@ -1,3 +1,4 @@
+import json
 import logging
 
 from rich import print
@@ -49,8 +50,6 @@ class NPTerminalClient:
 
     def suggest_triplets(self):
         for sen in self.hitl.get_unannotated_sentences():
-            if sen == "latest" or sen in self.hitl.text_to_triplets:
-                continue
             toks = self.hitl.get_tokens(sen)
             matches = self.hitl.match_rules(sen)
             graph = self.hitl.parsed_graphs[sen]
@@ -134,13 +133,31 @@ class NPTerminalClient:
         sen = input("> ")
         self.hitl.get_graphs(sen)
 
-    def upload_sentence(self):
-        console.print("[bold cyan]Enter path of text file:[/bold cyan]")
+    def upload_file(self):
+        console.print("[bold cyan]Enter path of txt or jsonl file:[/bold cyan]")
         fn = input("> ")
+        if fn.endswith("txt"):
+            self.upload_txt(fn)
+        elif fn.endswith("jsonl"):
+            self.upload_jsonl(fn)
+        else:
+            console.print(
+                "[bold red]Unknown file format, must be txt or jsonl[/bold red]"
+            )
+
+    def upload_txt(self, fn):
         console.print("[bold cyan]Parsing text...[/bold cyan]")
         with open(fn) as f:
             for line in tqdm(f):
                 self.hitl.get_graphs(line.strip())
+        console.print("[bold cyan]Done![/bold cyan]")
+
+    def upload_jsonl(self, fn):
+        console.print("[bold cyan]Reading jsonl...[/bold cyan]")
+        with open(fn) as f:
+            for i, line in tqdm(enumerate(f)):
+                data = json.loads(line)
+                self.hitl.store_triplets_from_annotation(data)
         console.print("[bold cyan]Done![/bold cyan]")
 
     def annotate(self):
@@ -190,7 +207,7 @@ class NPTerminalClient:
             elif choice == "S":
                 self.get_sentence()
             elif choice == "U":
-                self.upload_sentence()
+                self.upload_file()
             elif choice == "G":
                 self.print_graphs()
             elif choice == "A":
@@ -235,8 +252,8 @@ def main():
         format="%(asctime)s : "
         + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s"
     )
-    # logging.getLogger().setLevel(logging.INFO)
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
+    # logging.getLogger().setLevel(logging.DEBUG)
     client = NPTerminalClient()
     client.run()
 
