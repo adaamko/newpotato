@@ -6,6 +6,8 @@ from graphbrain.hyperedge import Atom, Hyperedge
 
 from newpotato.datatypes import Triplet
 
+NON_WORD_ATOMS = {"list/J/.", "+/B.am/.", "+/B.mm/."}
+
 
 def _text2subedge(edge: Hyperedge, text: str) -> Tuple[Hyperedge, int, int]:
     """
@@ -68,10 +70,18 @@ def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
         Tuple[int, ...]: tuple of token IDs covered by the subedge
     """
 
+    logging.debug(f'edge: {edge}, graph["atom2word"]: {graph["atom2word"]}')
     # converting UniqueAtoms to Atoms so that edge atoms can match
     atoms2toks = {Atom(atom): tok for atom, tok in graph["atom2word"].items()}
+    
+    toks = []
+    for atom in edge.all_atoms():
+        if atom not in atoms2toks:
+            assert str(atom) in NON_WORD_ATOMS, f'no token corresponding to atom "{atom}"'
+        else:
+            toks.append(atoms2toks[atom][1])
 
-    return tuple(atoms2toks[atom][1] for atom in edge.all_atoms())
+    return tuple(toks)
 
 
 def get_variables(edge: Hyperedge, words: List[str], triplet: Triplet) -> Dict[str, Hyperedge]:
@@ -114,7 +124,7 @@ def matches2triplets(matches: List[Dict], graph: Dict[str, Any]) -> List[Triplet
     """
     triplets = []
     for triple_dict in matches:
-        pred = None
+        pred = []
         args = []
         for key, edge in triple_dict.items():
             if key == "REL":

@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from typing import List, Tuple
+import logging
 
 from graphbrain.hyperedge import hedge
 from spacy.tokens.doc import Doc
@@ -26,7 +25,9 @@ class GraphParse(dict):
     @staticmethod
     def get_atom2token(atom2word, spacy_sentence):
         id2token = {tok.i: tok for tok in spacy_sentence}
-        atom2token = {hedge(atom): id2token[word[1]] for atom, word in atom2word.items()}
+        atom2token = {
+            hedge(atom): id2token[word[1]] for atom, word in atom2word.items()
+        }
         return atom2token
 
     @staticmethod
@@ -77,15 +78,16 @@ class GraphParse(dict):
         return d
 
 
-@dataclass
 class Triplet:
     """A class to handle triplets.
 
     A triplet consists  of a predicate and a list of arguments.
     """
 
-    pred: Tuple[int, ...]
-    args: List[Tuple[int, ...]]
+    def __init__(self, pred, args):
+        logging.debug(f'triple init got: pred: {pred}, args: {args}')
+        self.pred = tuple(int(i) for i in pred)
+        self.args = tuple(tuple(int(i) for i in arg) for arg in args)
 
     @staticmethod
     def from_json(data):
@@ -93,3 +95,9 @@ class Triplet:
 
     def to_json(self):
         return {"pred": self.pred, "args": self.args}
+
+    def __eq__(self, other):
+        return self.pred == other.pred and self.args == other.args
+
+    def __hash__(self):
+        return hash((self.pred, self.args))
