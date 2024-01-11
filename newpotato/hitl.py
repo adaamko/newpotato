@@ -16,7 +16,6 @@ from graphbrain.learner.rule import Rule
 from graphbrain.parsers import create_parser
 
 from newpotato.datatypes import GraphParse, Triplet
-from newpotato.evaluate import Evaluator
 from newpotato.utils import get_variables, matches2triplets
 
 assert spacy_component  # silence flake8
@@ -370,24 +369,6 @@ class HITLManager:
         self.extractor.extract_rules(learn=learn)
 
         return self.extractor.get_rules()
-
-    def evaluate_rules(self) -> Dict[str, Any]:
-        """
-        Measure precision and recall of rule set on annotated triplets
-        """
-        evaluator = Evaluator()
-        for sen in self.text_to_triplets:
-            gold_triplets = set([triplet for triplet, _ in self.text_to_triplets[sen]])
-            inferred_triplets = set(self.infer_triplets(sen))
-            fps = inferred_triplets - gold_triplets
-            if fps:
-                gold_triplets_str = self.triplets_to_str(gold_triplets, sen)
-                fps_str = self.triplets_to_str(fps, sen)
-                logging.debug(f'false positive:\ngolds: {gold_triplets_str}, fp: {fps_str}')
-            evaluator.add(gold_triplets, inferred_triplets)
-
-        evaluator.count()
-        return evaluator.get_results()
 
     def infer_triplets(self, sen: str) -> List[Triplet]:
         """

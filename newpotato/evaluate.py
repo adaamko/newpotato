@@ -1,23 +1,23 @@
+import argparse
 import logging
 from collections import Counter, defaultdict
 
+from newpotato.hitl import HITLManager
 
-class Evaluator:
-    def __init__(self):
-        self.events = []
+
+class HITLEvaluator:
+    def __init__(self, hitl):
+        self.hitl = hitl
+        self.reset()
+
+    def reset(self):
+        self.events = None
         self.counts = None
         self.results = None
 
-    def add(self, golds, preds):
-        logging.debug(f'eval event: golds: {golds}, preds: {preds}')
-        gold_types = [type(t) for t in golds]
-        pred_types = [type(t) for t in preds]
-        logging.debug(f'types: golds: {gold_types}, preds: {pred_types}')
-        self.events.append((set(golds), set(preds)))
-
-    def count(self):
+    def _get_counts(self):
         c = Counter()
-        for gold_set, pred_set in self.events:
+        for sen, gold_set, pred_set in self.get_events():
             c["docs"] += 1
             c["gold"] += len(gold_set)
             c["pred"] += len(pred_set)
@@ -29,11 +29,51 @@ class Evaluator:
         self.counts = c
         self.results = None
 
+    def get_counts(self):
+        if self.counts is None:
+            self._get_counts()
+        return self.counts
+
+    def _get_events(self):
+        self.events = []
+        for sen in self.hitl.text_to_triplets:
+            golds = set([triplet for triplet, _ in self.hitl.text_to_triplets[sen]])
+            preds = set(self.hitl.infer_triplets(sen))
+            self.events.append((sen, golds, preds))
+
+    def get_events(self):
+        if self.events is None:
+            self._get_events()
+        yield from self.events
+
+    def write_events_to_file(self, fn):
+        with open(fn, "w") as f:
+            self.write_events(f)
+
+    def get_event_type(self, golds, preds):
+        fn = len(golds - preds)
+        fp = len(preds - golds)
+        if fn == 0:
+            if fp == 0:
+                return "C"
+            return "FP"
+        if fp == 0:
+            return "FN"
+        return "B"
+
+    def write_events(self, stream):
+        for sen, golds, preds in self.get_events():
+            e_type = self.get_event_type(golds, preds)
+
+            golds_txt = " ".join(self.hitl.triplets_to_str(golds, sen))
+            preds_txt = " ".join(self.hitl.triplets_to_str(preds, sen))
+            stream.write(f"{e_type}\t{sen}\t{golds_txt}\t{preds_txt}\n")
+
     def f1(self, p, r):
         return 0.0 if p + r == 0 else (2 * p * r) / (p + r)
 
     def _get_results(self):
-        c = self.counts
+        c = self.get_counts()
         res = defaultdict(int)
         res["n_docs"] = c["docs"]
         res["n_gold"] = c["gold"]
@@ -55,3 +95,35 @@ class Evaluator:
             self.results = self._get_results()
 
         return self.results
+
+
+def get_args():
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("hitl_state_file")
+    parser.add_argument("-e", "--events_file", default=None, type=str)
+    return parser.parse_args()
+
+
+def main():
+    args = get_args()
+    logging.basicConfig(
+        format="%(asctime)s : "
+        + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s"
+    )
+    logging.getLogger().setLevel(logging.INFO)
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    hitl = HITLManager.load(args.hitl_state_file)
+    evaluator = HITLEvaluator(hitl)
+    results = evaluator.get_results()
+    for key, value in results.items():
+        print(f"{key}: {value}")
+
+    if args.events_file is not None:
+        evaluator.write_events_to_file(args.events_file)
+
+
+if __name__ == "__main__":
+    main()

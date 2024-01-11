@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
 
+from newpotato.evaluate import HITLEvaluator
 from newpotato.hitl import HITLManager
 
 console = Console()
@@ -15,10 +16,10 @@ console = Console()
 class NPTerminalClient:
     def __init__(self, args):
         if args.load_state is None:
-            console.print('no state file provided, initializing new HITL')
+            console.print("no state file provided, initializing new HITL")
             self.hitl = HITLManager()
         else:
-            console.print(f'loading HITL state from {args.load_state}')
+            console.print(f"loading HITL state from {args.load_state}")
             self.hitl = HITLManager.load(args.load_state)
 
     def load_from_file(self):
@@ -130,7 +131,8 @@ class NPTerminalClient:
         console.print(table)
 
     def evaluate(self):
-        results = self.hitl.evaluate_rules()
+        evaluator = HITLEvaluator(self.hitl)
+        results = evaluator.get_results()
         for key, value in results.items():
             console.print(f"{key}: {value}")
 
