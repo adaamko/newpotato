@@ -1,5 +1,6 @@
 import argparse
 import logging
+import sys
 from collections import Counter, defaultdict
 
 from newpotato.hitl import HITLManager
@@ -46,10 +47,6 @@ class HITLEvaluator:
             self._get_events()
         yield from self.events
 
-    def write_events_to_file(self, fn):
-        with open(fn, "w") as f:
-            self.write_events(f)
-
     def get_event_type(self, golds, preds):
         fn = len(golds - preds)
         fp = len(preds - golds)
@@ -64,10 +61,15 @@ class HITLEvaluator:
     def write_events(self, stream):
         for sen, golds, preds in self.get_events():
             e_type = self.get_event_type(golds, preds)
-
+            logging.debug("golds: " + ", ".join(f"{(t.pred, t.args)}" for t in golds))
+            logging.debug("preds: " + ", ".join(f"{(t.pred, t.args)}" for t in preds))
             golds_txt = " ".join(self.hitl.triplets_to_str(golds, sen))
             preds_txt = " ".join(self.hitl.triplets_to_str(preds, sen))
             stream.write(f"{e_type}\t{sen}\t{golds_txt}\t{preds_txt}\n")
+
+    def write_events_to_file(self, fn):
+        with open(fn, "w") as f:
+            self.write_events(f)
 
     def f1(self, p, r):
         return 0.0 if p + r == 0 else (2 * p * r) / (p + r)
@@ -122,7 +124,10 @@ def main():
         print(f"{key}: {value}")
 
     if args.events_file is not None:
-        evaluator.write_events_to_file(args.events_file)
+        if args.events_file == "-":
+            evaluator.write_events(sys.stdout)
+        else:
+            evaluator.write_events_to_file(args.events_file)
 
 
 if __name__ == "__main__":

@@ -74,14 +74,14 @@ def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
     # converting UniqueAtoms to Atoms so that edge atoms can match
     atoms2toks = {Atom(atom): tok for atom, tok in graph["atom2word"].items()}
     
-    toks = []
+    toks = set()
     for atom in edge.all_atoms():
         if atom not in atoms2toks:
             assert str(atom) in NON_WORD_ATOMS, f'no token corresponding to atom "{atom}"'
         else:
-            toks.append(atoms2toks[atom][1])
+            toks.add(atoms2toks[atom][1])
 
-    return tuple(toks)
+    return tuple(sorted(toks))
 
 
 def get_variables(edge: Hyperedge, words: List[str], triplet: Triplet) -> Dict[str, Hyperedge]:

@@ -145,6 +145,7 @@ class Extractor:
             self.classifier.learn()
         else:
             self.classifier.extract_patterns()
+            self.classifier._index_rules()
 
     def get_annotated_graphs_from_classifier(self) -> List[str]:
         """
@@ -204,6 +205,8 @@ class Extractor:
         try:
             matches = self.classifier.classify(graph)
             rule_ids_triggered = self.classifier.rules_triggered(graph)
+            logging.debug(f'{self.classifier.rules=}')
+            logging.debug(f'{rule_ids_triggered=}')
             rules_triggered = [
                 str(self.classifier.rules[rule_id - 1].pattern)
                 for rule_id in rule_ids_triggered
@@ -587,10 +590,12 @@ class HITLManager:
 
         tok_i, tok_j = None, None
         tokens = self.get_tokens(sen)
+        logging.debug(f"tokens: {tokens}")
+        logging.debug(f"tok idxs: {[tok.idx for tok in tokens]}")
         for i, token in enumerate(tokens):
             if token.idx == start:
                 tok_i = i
-            if token.idx > end:
+            if token.idx >= end:
                 tok_j = i
                 break
         if tok_i is None:

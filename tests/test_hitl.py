@@ -1,4 +1,5 @@
 import tempfile
+import unittest
 
 from newpotato.hitl import HITLManager
 
@@ -13,16 +14,27 @@ def dict_eq(d1, d2):
     return True
 
 
-def test_save_load():
-    sen = "John loves Mary"
-    hitl = HITLManager()
-    hitl.get_graphs(sen)[0]
-    hitl.store_triplet(sen, (1,), ((0,), (2,)))
-    hitl.get_annotated_graphs()
-    rules = hitl.get_rules()
+class Test(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.hitl = HITLManager()
 
-    fn = tempfile.NamedTemporaryFile(delete="false").name
-    hitl.save(fn)
-    hitl2 = HITLManager.load(fn)
-    rules2 = hitl2.get_rules()
-    assert rules == rules2
+    def test_save_load(self):
+        sen = "John loves Mary"
+        self.hitl.get_graphs(sen)[0]
+        self.hitl.store_triplet(sen, (1,), ((0,), (2,)))
+        self.hitl.get_annotated_graphs()
+        rules = self.hitl.get_rules()
+
+        fn = tempfile.NamedTemporaryFile(delete="false").name
+        self.hitl.save(fn)
+        hitl2 = HITLManager.load(fn)
+        rules2 = hitl2.get_rules()
+        assert rules == rules2
+
+    def test_toks_from_txt(self):
+        sen = "The AssetId property of the DriveType is unique."
+        word = "unique"
+
+        self.hitl.get_graphs(sen)
+        assert self.hitl.get_toks_from_txt(word, sen) == (7,)
