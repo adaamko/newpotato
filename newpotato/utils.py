@@ -1,8 +1,10 @@
+import itertools
 import logging
+from collections import defaultdict
 from typing import List, Dict, Any, Tuple
 
 import editdistance
-from graphbrain.hyperedge import Atom, Hyperedge
+from graphbrain.hyperedge import Hyperedge
 
 from newpotato.datatypes import Triplet
 
@@ -70,21 +72,46 @@ def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
         Tuple[int, ...]: tuple of token IDs covered by the subedge
     """
 
-    logging.debug(f'edge: {edge}, graph["atom2word"]: {graph["atom2word"]}')
-    # converting UniqueAtoms to Atoms so that edge atoms can match
-    atoms2toks = {Atom(atom): tok for atom, tok in graph["atom2word"].items()}
-    
+    logging.debug(f"edge2toks\n{edge=}\n{graph=}")
+
     toks = set()
+    strs_to_atoms = defaultdict(list)
+    for atom, word in graph["atom2word"].items():
+        strs_to_atoms[atom.to_str()].append(atom)
+
+    to_disambiguate = []
+
     for atom in edge.all_atoms():
-        if atom not in atoms2toks:
-            assert str(atom) in NON_WORD_ATOMS, f'no token corresponding to atom "{atom}"'
+        atom_str = atom.to_str()
+        if atom_str not in strs_to_atoms:
+            assert (
+                str(atom) in NON_WORD_ATOMS
+            ), f'no token corresponding to atom "{atom}"'
         else:
-            toks.add(atoms2toks[atom][1])
+            cands = strs_to_atoms[atom_str]
+            if len(cands) == 1:
+                toks.add(graph["atom2word"][cands[0]][1])
+            else:
+                to_disambiguate.append([graph["atom2word"][cand][1] for cand in cands])
+
+    if len(to_disambiguate) > 0:
+        hyp_sets = set()
+        for cand in itertools.product(*to_disambiguate):
+            hyp_set = toks | set(cand)
+            # https://stackoverflow.com/a/33575259/2753770
+            if sorted(hyp_set) == list(range(min(hyp_set), max(hyp_set) + 1)):
+                hyp_sets.add(tuple(sorted(hyp_set)))
+        if len(hyp_sets) > 1:
+            logging.warning(f"cannot disambiguate: {edge=}, {hyp_sets=}, {graph=}")
+        for tok in list(hyp_sets)[0]:
+            toks.add(tok)
 
     return tuple(sorted(toks))
 
 
-def get_variables(edge: Hyperedge, words: List[str], triplet: Triplet) -> Dict[str, Hyperedge]:
+def get_variables(
+    edge: Hyperedge, words: List[str], triplet: Triplet
+) -> Dict[str, Hyperedge]:
     """
     get the variables from a hypergraph that correspond to parts of a triplet
 
@@ -118,7 +145,7 @@ def matches2triplets(matches: List[Dict], graph: Dict[str, Any]) -> List[Triplet
     Args:
         matches (List[Dict]): a list of hypergraphs corresponding to the matches
         graphs (Dict[str, Any]]): The hypergraph of the sentence
-    
+
     Returns:
         List[Triplet] the list of triplets corresponding to the matches
     """

@@ -1,6 +1,6 @@
 import logging
 
-from graphbrain.hyperedge import hedge
+from graphbrain.hyperedge import hedge, unique
 from spacy.tokens.doc import Doc
 
 
@@ -23,59 +23,38 @@ class GraphParse(dict):
     """
 
     @staticmethod
-    def get_atom2token(atom2word, spacy_sentence):
-        id2token = {tok.i: tok for tok in spacy_sentence}
-        atom2token = {
-            hedge(atom): id2token[word[1]] for atom, word in atom2word.items()
-        }
-        return atom2token
-
-    @staticmethod
     def from_json(data, spacy_vocab):
         graph = GraphParse()
-        spacy_sentence = Doc(spacy_vocab).from_json(data["spacy_sentence"])[:]
-        print("loaded spacy sentence:", spacy_sentence)
-
-        for key, value in data.items():
-            new_value = value
-            if key == "atom2token":
-                new_value = GraphParse.get_atom2token(data["atom2word"], spacy_sentence)
-            elif key == "atom2word":
-                new_value = {hedge(k2): tuple(v2) for k2, v2 in value.items()}
-            elif key == "word2atom":
-                new_value = {int(k2): v2 for k2, v2 in value.items()}
-            elif key == "spacy_sentence":
-                new_value = spacy_sentence
-            elif key == "extra_edges":
-                new_value = set(value)
-            elif key in ("main_edge", "resolved_corefs"):
-                new_value = hedge(value)
-
-            graph[key] = new_value
+        graph["spacy_sentence"] = Doc(spacy_vocab).from_json(data["spacy_sentence"])[:]
+        graph["text"] = data["text"]
+        graph["failed"] = data["failed"]
+        graph["extra_edges"] = set(data["extra_edges"])
+        graph["main_edge"] = hedge(data["main_edge"])
+        graph["resolved_corefs"] = hedge(data["resolved_corefs"])
+        graph["word2atom"] = {
+            int(i_str): unique(hedge(atom_str))
+            for i_str, atom_str in data["word2atom"].items()
+        }
+        graph["atom2word"], graph["atom2token"] = {}, {}
+        for tok in graph["spacy_sentence"]:
+            if tok.i not in graph["word2atom"]:
+                continue
+            atom = graph["word2atom"][tok.i]
+            graph["atom2token"][atom] = tok
+            graph["atom2word"][atom] = (tok.text, tok.i)
 
         return graph
 
     def to_json(self):
-        d = {}
-        for key, value in self.items():
-            new_value = value
-            if key == "atom2token":
-                # we cannot serialize spacy Tokens so we reconstruct them from atom2word
-                new_value = None
-            elif key == "atom2word":
-                new_value = {k2.to_str(): v2 for k2, v2 in value.items()}
-            elif key == "spacy_sentence":
-                new_value = value.as_doc().to_json()
-            elif key == "extra_edges":
-                # value is a set
-                new_value = sorted(list(value))
-            elif key in ("main_edge", "resolved_corefs"):
-                # values are Hyperedges:
-                new_value = value.to_str()
-
-            d[key] = new_value
-
-        return d
+        return {
+            "spacy_sentence": self["spacy_sentence"].as_doc().to_json(),
+            "extra_edges": sorted(list(self["extra_edges"])),
+            "main_edge": self["main_edge"].to_str(),
+            "resolved_corefs": self["resolved_corefs"].to_str(),
+            "text": self["text"],
+            "word2atom": self["word2atom"],
+            "failed": self["failed"],
+        }
 
 
 class Triplet:
@@ -85,7 +64,7 @@ class Triplet:
     """
 
     def __init__(self, pred, args):
-        logging.debug(f'triple init got: pred: {pred}, args: {args}')
+        logging.debug(f"triple init got: pred: {pred}, args: {args}")
         self.pred = tuple(int(i) for i in pred)
         self.args = tuple(tuple(int(i) for i in arg) for arg in args)
 

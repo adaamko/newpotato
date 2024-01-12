@@ -205,8 +205,8 @@ class Extractor:
         try:
             matches = self.classifier.classify(graph)
             rule_ids_triggered = self.classifier.rules_triggered(graph)
-            logging.debug(f'{self.classifier.rules=}')
-            logging.debug(f'{rule_ids_triggered=}')
+            logging.debug(f"{self.classifier.rules=}")
+            logging.debug(f"{rule_ids_triggered=}")
             rules_triggered = [
                 str(self.classifier.rules[rule_id - 1].pattern)
                 for rule_id in rule_ids_triggered
