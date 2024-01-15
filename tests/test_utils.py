@@ -27,7 +27,7 @@ def test_subedge2toks():
     triplets = matches2triplets(matches, graph2)
     print("triplets:", triplets)
     assert triplets[0].pred == (1,)
-    assert triplets[0].args == [(0,), (2,)]
+    assert triplets[0].args == ((0,), (2,))
 
 
 if __name__ == "__main__":

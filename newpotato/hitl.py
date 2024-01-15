@@ -16,7 +16,7 @@ from graphbrain.learner.rule import Rule
 from graphbrain.parsers import create_parser
 
 from newpotato.datatypes import GraphParse, Triplet
-from newpotato.utils import get_variables
+from newpotato.utils import get_variables, matches2triplets
 
 assert spacy_component  # silence flake8
 
@@ -46,10 +46,12 @@ class TextParser:
 
     def __init__(self, lang: str = "en", corefs: bool = True):
         self.lang = lang
-        self.parser = create_parser(lang=self.lang)
         self.corefs = corefs
+        self.init_parser()
 
-        if corefs:
+    def init_parser(self):
+        self.parser = create_parser(lang=self.lang)
+        if self.corefs:
             self.coref_nlp = spacy.load(
                 "en_core_web_sm", exclude=["parser", "lemmatizer", "ner", "textcat"]
             )
@@ -143,6 +145,7 @@ class Extractor:
             self.classifier.learn()
         else:
             self.classifier.extract_patterns()
+            self.classifier._index_rules()
 
     def get_annotated_graphs_from_classifier(self) -> List[str]:
         """
@@ -202,6 +205,8 @@ class Extractor:
         try:
             matches = self.classifier.classify(graph)
             rule_ids_triggered = self.classifier.rules_triggered(graph)
+            logging.debug(f"{self.classifier.rules=}")
+            logging.debug(f"{rule_ids_triggered=}")
             rules_triggered = [
                 str(self.classifier.rules[rule_id - 1].pattern)
                 for rule_id in rule_ids_triggered
@@ -328,6 +333,20 @@ class HITLManager:
         with open(fn, "w") as f:
             f.write(json.dumps(self.to_json()))
 
+    def get_status(self) -> Dict[str, Any]:
+        """
+        return basic stats about the HITL state
+        """
+        n_rules = 0
+        if self.extractor.classifier is not None:
+            n_rules = len(self.extractor.classifier.rules)
+
+        return {
+            "n_sens": len(self.parsed_graphs),
+            "n_annotated": len(self.text_to_triplets),
+            "n_rules": n_rules,
+        }
+
     def parse_text(self, text: str) -> List[Dict[str, Any]]:
         """
         Parse the given text.
@@ -353,6 +372,56 @@ class HITLManager:
         self.extractor.extract_rules(learn=learn)
 
         return self.extractor.get_rules()
+
+    def infer_triplets(self, sen: str) -> List[Triplet]:
+        """
+        match rules against sentence and return triplets corresponding to the matches
+
+        Args:
+            sen (str): the sentence to perform inference on
+
+        Returns:
+            List[Triple]: list of triplets inferred
+        """
+        logging.debug(f'inferring triplets for: "{sen}"')
+        graph = self.parsed_graphs[sen]
+        logging.debug(f'graph: "{graph}"')
+        matches = self.match_rules(sen)
+        logging.debug(f'matches: "{matches}"')
+        triplets = matches2triplets(matches, graph)
+        logging.debug(f'triplets: "{triplets}"')
+
+        return triplets
+
+    def triplets_to_str(self, triplets: List[Triplet], sen: str) -> List[str]:
+        """
+        Returns human-readable versions of triplets for a sentence
+
+        Args:
+            triplets (List[Triplet]): the triplets to convert
+            sen (str): the sentence that is the source of this triplet
+
+        Returns:
+            List[str]: the human-readable form of the triplet
+        """
+        return [self.triplet_to_str(triplet, sen) for triplet in triplets]
+
+    def triplet_to_str(self, triplet: Triplet, sen: str) -> str:
+        """
+        Returns a human-readable version of a triplet by retrieving the words and phrases from the sentence
+
+        Args:
+            triplet (Triplet): the triplet to display
+            sen (str): the sentence that is the source of this triplet
+
+        Returns:
+            str: the human-readable form of the triplet
+        """
+        pred, args = triplet.pred, triplet.args
+        toks = self.get_tokens(sen)
+        pred_phrase = "_".join(toks[a].text for a in pred)
+        args_str = ", ".join("_".join(toks[a].text for a in phrase) for phrase in args)
+        return f"{pred_phrase}({args_str})"
 
     def get_annotated_graphs(self) -> List[str]:
         """
@@ -521,10 +590,12 @@ class HITLManager:
 
         tok_i, tok_j = None, None
         tokens = self.get_tokens(sen)
+        logging.debug(f"tokens: {tokens}")
+        logging.debug(f"tok idxs: {[tok.idx for tok in tokens]}")
         for i, token in enumerate(tokens):
             if token.idx == start:
                 tok_i = i
-            if token.idx > end:
+            if token.idx >= end:
                 tok_j = i
                 break
         if tok_i is None:
@@ -539,7 +610,7 @@ class HITLManager:
 
     def get_unannotated_sentences(
         self, max_sens: Optional[int] = None, random_order: bool = False
-    ) -> Generator[str]:
+    ) -> Generator[str, None, None]:
         """
         get a list of sentences that have been added and parsed but not yet annotated
 

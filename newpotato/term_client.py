@@ -1,20 +1,26 @@
+import argparse
 import json
 import logging
 
-from rich import print
+# from rich import print
 from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
 
+from newpotato.evaluate import HITLEvaluator
 from newpotato.hitl import HITLManager
-from newpotato.utils import matches2triplets
 
 console = Console()
 
 
 class NPTerminalClient:
-    def __init__(self):
-        self.hitl = HITLManager()
+    def __init__(self, args):
+        if args.load_state is None:
+            console.print("no state file provided, initializing new HITL")
+            self.hitl = HITLManager()
+        else:
+            console.print(f"loading HITL state from {args.load_state}")
+            self.hitl = HITLManager.load(args.load_state)
 
     def load_from_file(self):
         while True:
@@ -50,12 +56,8 @@ class NPTerminalClient:
 
     def suggest_triplets(self):
         for sen in self.hitl.get_unannotated_sentences():
-            toks = self.hitl.get_tokens(sen)
-            matches = self.hitl.match_rules(sen)
-            graph = self.hitl.parsed_graphs[sen]
-            triplets = matches2triplets(matches, graph)
-            for triplet in triplets:
-                triplet_str = self.triplet_str(triplet, toks)
+            for triplet in self.hitl.infer_triplets(sen):
+                triplet_str = self.hitl.triplet_to_str(triplet, sen)
                 console.print("[bold yellow]How about this?[/bold yellow]")
                 console.print(f"[bold yellow]{sen}[/bold yellow]")
                 console.print(f"[bold yellow]{triplet_str}[/bold yellow]")
@@ -86,9 +88,19 @@ class NPTerminalClient:
                     console.print(match)
 
     def print_status(self):
-        triplets = self.hitl.get_true_triplets()
+        status = self.hitl.get_status()
 
-        self.print_triplets(triplets)
+        status_lines = [f'{status["n_rules"]} rules', f'{status["n_sens"]} sentences']
+
+        if status["n_sens"] > 0:
+            status_lines.append(
+                f'{status["n_annotated"]} of these annotated ({status["n_annotated"]/status["n_sens"]:.2%})'
+            )
+
+        console.print("\n".join(status_lines))
+
+        triplets = self.hitl.get_true_triplets()
+        self.print_triplets(triplets, max_n=10)
 
     def print_rules(self):
         annotated_graphs = self.hitl.get_annotated_graphs()
@@ -100,19 +112,29 @@ class NPTerminalClient:
         console.print("[bold green]Extracted Rules:[/bold green]")
         console.print(rules)
 
-    def print_triplets(self, triplets_by_sen):
+    def print_triplets(self, triplets_by_sen, max_n=None):
         console.print("[bold green]Current Triplets:[/bold green]")
 
         table = Table(show_header=True, header_style="bold magenta")
         table.add_column("Sentence")
         table.add_column("Triplets")
 
-        for sen, triplets in triplets_by_sen.items():
-            toks = self.hitl.get_tokens(sen)
-            triplet_strs = [self.triplet_str(triplet, toks) for triplet in triplets]
+        for i, (sen, triplets) in enumerate(triplets_by_sen.items()):
+            if max_n is not None and i > max_n:
+                table.add_row("...", "...")
+                break
+            triplet_strs = [
+                self.hitl.triplet_to_str(triplet, sen) for triplet in triplets
+            ]
             table.add_row(sen, "\n".join(triplet_strs))
 
         console.print(table)
+
+    def evaluate(self):
+        evaluator = HITLEvaluator(self.hitl)
+        results = evaluator.get_results()
+        for key, value in results.items():
+            console.print(f"{key}: {value}")
 
     def print_graphs(self):
         table = Table(show_header=True, header_style="bold magenta")
@@ -121,12 +143,6 @@ class NPTerminalClient:
         for sen, graph in self.hitl.parsed_graphs.items():
             table.add_row(sen, str(graph["main_edge"]))
         console.print(table)
-
-    def triplet_str(self, triplet, toks):
-        pred, args = triplet.pred, triplet.args
-        pred_phrase = "_".join(toks[a].text for a in pred)
-        args_str = ", ".join("_".join(toks[a].text for a in phrase) for phrase in args)
-        return f"{pred_phrase}({args_str})"
 
     def get_sentence(self):
         console.print("[bold cyan]Enter new sentence:[/bold cyan]")
@@ -197,7 +213,7 @@ class NPTerminalClient:
         while True:
             self.print_status()
             console.print(
-                "[bold cyan]Choose an action:\n\t(S)entence\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(T)riplets\n\t(R)ules\n\t(I)nference\n\t(L)oad\n\t(W)rite\n\t(C)lear\n\t(E)xit\n\t(H)elp[/bold cyan]"
+                "[bold cyan]Choose an action:\n\t(S)entence\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(T)riplets\n\t(R)ules\n\t(I)nference\n\t(E)valuate\n\t(L)oad\n\t(W)rite\n\t(C)lear\n\t(Q)uit\n\t(H)elp[/bold cyan]"
             )
             choice = input("> ").upper()
             if choice in ("T", "I") and self.hitl.extractor.classifier is None:
@@ -218,13 +234,15 @@ class NPTerminalClient:
                 self.suggest_triplets()
             elif choice == "I":
                 self.classify()
+            elif choice == "E":
+                self.evaluate()
             elif choice == "L":
                 self.load_from_file()
             elif choice == "W":
                 self.write_to_file()
             elif choice == "C":
                 self.clear_console()
-            elif choice == "E":
+            elif choice == "Q":
                 console.print("[bold red]Exiting...[/bold red]")
                 break
             elif choice == "H":
@@ -237,9 +255,10 @@ class NPTerminalClient:
                     + "\t(T)riplets: Suggest inferred triplets for sentences\n"
                     + "\t(R)ules: Extract rules from the annotated graphs\n"
                     + "\t(L)oad: Load HITL state from file\n"
+                    + "\t(E)valuate: Evaluate rules on annotated sentences\n"
                     + "\t(W)rite: Write HITL state to file\n"
                     + "\t(C)lear: Clear the console\n"
-                    + "\t(E)xit: Exit the program\n"
+                    + "\t(Q)uit: Exit the program\n"
                     + "\t(H)elp: Show this help message\n"
                 )
 
@@ -247,14 +266,23 @@ class NPTerminalClient:
                 console.print("[bold red]Invalid choice[/bold red]")
 
 
+def get_args():
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-l", "--load_state", default=None, type=str)
+    return parser.parse_args()
+
+
 def main():
+    args = get_args()
     logging.basicConfig(
         format="%(asctime)s : "
         + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s"
     )
     logging.getLogger().setLevel(logging.INFO)
-    # logging.getLogger().setLevel(logging.DEBUG)
-    client = NPTerminalClient()
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+    client = NPTerminalClient(args)
     client.run()
 
 
