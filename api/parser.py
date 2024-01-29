@@ -44,7 +44,7 @@ def get_params() -> Dict[str, Any]:
 
 @app.post("/check_params")
 def check_params(params: ParserParams) -> Dict[str, Any]:
-    parser_params = parser.get_params()
+    parser_params = ParserParams(params=parser.get_params())
     if params != parser_params:
         logging.error(f"parser params mismatch: {params=}, {parser_params=}")
         raise HTTPException(

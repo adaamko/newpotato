@@ -189,9 +189,12 @@ class HITLManager:
             self.extractor = Extractor()
         else:
             self.extractor = Extractor.from_json(extractor_data)
+        
+        logging.info('HITL manager initialized')
 
     @staticmethod
     def load(fn):
+        logging.info(f'loading HITL state from {fn=}')
         with open(fn) as f:
             data = json.load(f)
         return HITLManager.from_json(data)
