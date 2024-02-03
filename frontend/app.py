@@ -3,6 +3,9 @@ from collections import defaultdict
 
 import requests
 import streamlit as st
+from graphbrain import hedge
+from graphbrain.notebook import *
+from graphbrain.notebook import _edge2html_vblocks
 from st_cytoscape import cytoscape
 from streamlit_text_annotation import text_annotation
 
@@ -207,63 +210,91 @@ def visualize_kg(knowledge_graph):
         {
             "selector": "node",
             "style": {
-                "background-color": "#007bff",
+                "background-color": "#8BC34A",  # Light Green
                 "label": "data(id)",
-                "color": "#fff",
+                "color": "#FFFFFF",  # White for text
                 "text-valign": "center",
                 "text-halign": "center",
+                "text-wrap": "wrap",
+                "text-max-width": "120px",
                 "font-size": "12px",
-                "width": "40px",
-                "height": "40px",
-                "border-color": "#fff",
+                "width": "125px",
+                "height": "125px",
+                "border-color": "#FFFFFF",
                 "border-width": "2px",
             },
         },
         {
             "selector": "edge",
             "style": {
-                "width": 3,
-                "line-color": "#00fa9a",
-                "target-arrow-color": "#00fa9a",
+                "width": 4,
+                "line-color": "#FFC107",  # Amber
+                "target-arrow-color": "#FFC107",
                 "target-arrow-shape": "triangle",
                 "curve-style": "bezier",
                 "label": "data(label)",
-                "font-size": "10px",
-                "color": "#000",
+                "font-size": "12px",
+                "color": "#000000",  # Black for text
                 "text-background-opacity": 1,
-                "text-background-color": "#fff",
+                "text-background-color": "#FFFFFF",  # White background for text
                 "text-background-padding": "3px",
                 "text-background-shape": "roundrectangle",
             },
         },
     ]
 
-    selected = cytoscape(
-        elements,
-        stylesheet,
-        selection_type="single",
-        key="graph",
-        layout={"name": "klay"},
-    )
+    col1, col2 = st.columns(2)
 
-    if selected:
-        edges = selected["edges"]
-        if edges:
-            edge_id = edges[0]  # Assuming single selection
-            arg0, rel, arg1 = edge_id.split("-")
+    with col1:
+        selected = cytoscape(
+            elements,
+            stylesheet,
+            selection_type="single",
+            key="graph",
+            layout={"name": "klay"},
+            height="600px",
+        )
 
-            # Display related information for the selected edge
-            st.write(f"Selected Edge: {rel} between {arg0} and {arg1}")
-            for sentence, rules in knowledge_graph[(rel, arg0, arg1)]:
-                st.write(f"Sentence: {sentence}")
-                for rule in rules:
-                    st.write(f"Rule: {rule}")
+    with col2:
+        if selected:
+            edges = selected["edges"]
+            if edges:
+                edge_id = edges[0]  # Assuming single selection
+                arg0, rel, arg1 = edge_id.split("-")
+
+                # Display related information for the selected edge
+
+                st.markdown(
+                    "<style> .big-font { font-size:20px !important; } .highlight { background-color: lightyellow; } .rule-style { background-color: lightgrey; padding: 10px; border-radius: 5px; margin: 5px 0; } </style>",
+                    unsafe_allow_html=True,
+                )
+
+                st.markdown(
+                    f"<div class='big-font'>Selected Edge: <br> <b>ARG0:</b> {arg0} <br> <b>REL:</b> {rel} <br> <b>ARG1:</b> {arg1}</div>",
+                    unsafe_allow_html=True,
+                )
+
+                for sentence, rules in knowledge_graph[(rel, arg0, arg1)]:
+                    st.markdown(
+                        f"<div class='big-font'><div class='highlight'>Sentence: {sentence} </div></div>",
+                        unsafe_allow_html=True,
+                    )
+
+                    for rule in rules:
+                        st.markdown(
+                            "<div class='big-font'><div class='rule-style'><b>The matched pattern:</b></div></div>",
+                            unsafe_allow_html=True,
+                        )
+
+                        html = _edge2html_vblocks(hedge(rule))
+                        st.write(html, unsafe_allow_html=True)
+                        # st.write(f"Rule: {rule}")
 
 
 def main():
     """Main function."""
     st.set_page_config(page_title="NewPotato Streamlit App", layout="wide")
-    st.title("NewPotato Streamlit App")
+    st.title("NewPotato Demo")
 
     # Initialize or get Streamlit state
     if "sentences" not in st.session_state:
@@ -290,6 +321,9 @@ def main():
             sentences = st.text_area("Text input", height=300, key="text")
 
         if st.button("Submit Sentence"):
+            # Remove 2: from sentences, e.g. "The mandatory 2:Manufacturer provides a human-readable" should be "The mandatory Manufacturer provides a human-readable"
+            sentences = sentences.replace("2:", "")
+
             payload = {"text": sentences}
             response = api_request("POST", "parse", payload)
             if response:
@@ -342,6 +376,7 @@ def main():
 
         if st.button("Classify"):
             if sentence_to_classify.strip():
+                sentence_to_classify = sentence_to_classify.replace("2:", "")
                 payload = {"text": sentence_to_classify}
                 response = api_request("POST", "classify_text", payload)
                 if response["status"] == "No matches found":
