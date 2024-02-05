@@ -502,9 +502,9 @@ class HITLManager:
         Returns:
             Tuple[int, ...] the tokens of the sentence corresponding to the substring
         """
-        logging.debug(f"words_txt: {words_txt}, sen: {sen}")
-
-        pattern = re.escape(re.sub("[()]", "", words_txt))
+        logging.debug(f"{words_txt=}, {sen=}")
+        pattern = re.escape(re.sub('["()]', "", words_txt))
+        logging.debug(f"{pattern=}")
         if pattern[0].isalpha():
             pattern = r"\b" + pattern
         if pattern[-1].isalpha():
