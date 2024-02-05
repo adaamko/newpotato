@@ -73,30 +73,32 @@ def _text2subedge(edge: Hyperedge, words: Set[str]) -> Tuple[Hyperedge, Set[str]
         set: words covered by the matching hyperedge
     """
     if edge.is_atom():
-        word = edge.label()
-        if word in words:
+        lowered_word = edge.label().lower()
+        if lowered_word in words:
             # an edge matching one word
-            return edge, set([word])
-        # an irrelevant edge
-        return edge, set()
+            return edge, set([lowered_word]), set()
+        return edge, set(), set([lowered_word])
 
-    words_covered = set()
+    relevant_words, irrelevant_words = set(), set()
     relevant_subedges = []
     for subedge in edge:
-        s_edge, subedge_words_covered = _text2subedge(subedge)
-        if subedge_words_covered == words:
+        s_edge, subedge_relevant_words, subedge_irrelevant_words = _text2subedge(subedge, words)
+        if subedge_relevant_words == words:
             # a subedge covering everything, search can stop
-            return s_edge, subedge_words_covered
-        elif len(subedge_words_covered) > 0:
-            words_covered |= subedge_words_covered
+            return s_edge, subedge_relevant_words, set()
+        
+        if len(subedge_relevant_words) > 0:
+            relevant_words |= subedge_relevant_words
             relevant_subedges.append(s_edge)
+            irrelevant_words_of_last_relevant_edge = subedge_irrelevant_words
+        irrelevant_words |= subedge_irrelevant_words
 
     if len(relevant_subedges) == 1:
         # only one relevant subedge
-        return relevant_subedges[0], words_covered
+        return relevant_subedges[0], relevant_words, irrelevant_words_of_last_relevant_edge
 
     # more than one relevant subedge OR no words covered
-    return edge, words_covered
+    return edge, relevant_words, irrelevant_words
 
 
 def text2subedge(edge: Hyperedge, words: Set[str]) -> Hyperedge:
@@ -115,11 +117,13 @@ def text2subedge(edge: Hyperedge, words: Set[str]) -> Hyperedge:
         Hyperedge: the best matching hyperedge
         bool: whether the matching edge is exact (contains all the words and no other words)
     """
-    subedge, words_covered = _text2subedge(edge, words)
-    logging.debug(f'text2subedge: best subedge for "{words}": {subedge}')
-    if words == words_covered:
-        return subedge, True
-    elif words.issubset(words_covered):
+    lowered_words = set(word.lower() for word in words)
+    subedge, relevant_words, irrelevant_words = _text2subedge(edge, lowered_words)
+    logging.debug(f'text2subedge: {subedge=}, {relevant_words=}, {irrelevant_words=}')
+
+    if lowered_words == relevant_words:
+        if len(irrelevant_words) == 0:
+            return subedge, True
         return subedge, False
     else:
         raise ValueError(f"hyperedge {edge} does not contain all words in {words}")

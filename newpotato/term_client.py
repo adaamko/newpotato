@@ -199,6 +199,7 @@ class NPTerminalClient:
             print([graph["text"] for graph in graphs])
             raise Exception()
         sen_graph = graphs[0]
+        sen = sen_graph["text"]
         for triplet in data["triplets"]:
             try:
                 pred = self.hitl.get_toks_from_txt(triplet["rel"], sen)
@@ -212,10 +213,10 @@ class NPTerminalClient:
 
             if triplet is None or not triplet.mapped:
                 console.print(
-                    f"[bold red] Could not map annotation {triplet} to subedges, please provide alternative (or press ENTER to skip)[/bold red]"
+                    f"[bold red] Could not map annotation {self.hitl.triplet_to_str(triplet, sen)} to subedges, please provide alternative (or press ENTER to skip)[/bold red]"
                 )
                 self.print_tokens(sen)
-                triplet = self.get_single_triplet_from_user(data["sen"])
+                triplet = self.get_single_triplet_from_user(sen)
                 if triplet is None:
                     continue
 
@@ -259,7 +260,7 @@ class NPTerminalClient:
             
             [/bold cyan]"""
         )
-        graph = self.parsed_graphs[sentence]
+        graph = self.hitl.parsed_graphs[sentence]
         while True:
             triplet = self._get_single_triplet_from_user()
             if triplet is None:
@@ -277,7 +278,7 @@ class NPTerminalClient:
                 )
                 continue
 
-        yield pred, args
+            return mapped_triplet
 
     def run(self):
         while True:
