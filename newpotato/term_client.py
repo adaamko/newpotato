@@ -1,14 +1,16 @@
 import argparse
 import json
 import logging
+from typing import Any, Dict
 
 # from rich import print
 from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
 
+from newpotato.datatypes import Triplet
 from newpotato.evaluate import HITLEvaluator
-from newpotato.hitl import HITLManager
+from newpotato.hitl import AnnotatedWordsNotFoundError, HITLManager
 
 console = Console()
 
@@ -68,8 +70,7 @@ class NPTerminalClient:
                 while choice_str not in ("c", "i"):
                     choice_str = input("(c)orrect or (i)ncorrect?")
                 positive = True if choice_str == "c" else False
-                pred, args = triplet.pred, triplet.args
-                self.hitl.store_triplet(sen, pred, args, positive=positive)
+                self.hitl.store_triplet(sen, triplet, positive=positive)
 
     def classify(self):
         if not self.hitl.get_rules():
@@ -179,41 +180,104 @@ class NPTerminalClient:
         with open(fn) as f:
             for i, line in tqdm(enumerate(f)):
                 data = json.loads(line)
-                self.hitl.store_triplets_from_annotation(data)
+                self.get_triplets_from_annotation(data)
         console.print("[bold cyan]Done![/bold cyan]")
+
+    def get_triplets_from_annotation(self, data: Dict[str, Any]):
+        """
+        Get and store annotated triplets.
+
+        Args:
+            data (dict): A dictionary with the keys "sen" and "triplets".
+                Triplet annotations must be provided as a list of dictionaries with the keys
+                "rel" and "args", each of which must be a substring of the sentence.
+        """
+        sen = data["sen"]
+        graphs = self.hitl.get_graphs(sen)
+        if len(graphs) > 1:
+            print("sentence split into two:", data["sen"])
+            print([graph["text"] for graph in graphs])
+            raise Exception()
+        sen_graph = graphs[0]
+        for triplet in data["triplets"]:
+            try:
+                pred = self.hitl.get_toks_from_txt(triplet["rel"], sen)
+                args = [
+                    self.hitl.get_toks_from_txt(arg_txt, sen)
+                    for arg_txt in triplet["args"]
+                ]
+                triplet = Triplet(pred, args, sen_graph)
+            except AnnotatedWordsNotFoundError:
+                triplet = None
+
+            if triplet is None or not triplet.mapped:
+                console.print(
+                    f"[bold red] Could not map annotation {triplet} to subedges, please provide alternative (or press ENTER to skip)[/bold red]"
+                )
+                self.print_tokens(sen)
+                triplet = self.get_single_triplet_from_user(data["sen"])
+                if triplet is None:
+                    continue
+
+            self.hitl.store_triplet(sen, triplet, True)
 
     def annotate(self):
         for sen in self.hitl.get_unannotated_sentences(random_order=True, max_sens=3):
-            for pred, args in self.get_annotation_for_sen(sen):
-                self.hitl.store_triplet(sen, pred, args)
+            self.get_triplets_from_user(sen)
 
-    def get_annotation_for_sen(self, sentence):
+    def print_tokens(self, sentence):
         tokens = self.hitl.get_tokens(sentence)
         console.print("[bold cyan]Tokens:[/bold cyan]")
         console.print(" ".join(f"{i}_{tok}" for i, tok in enumerate(tokens)))
 
+    def get_triplets_from_user(self, sentence):
+        self.print_tokens(sentence)
+
         while True:
-            console.print(
-                """
-                [bold cyan] Enter comma-separated list of predicate and args, with token IDs in each separated by underscores, e.g.: 0_The 1_boy 2_has 3_gone 4_to 5_school -> 2_3,0_1,4_5
-                Press enter to finish.
-                
-                [/bold cyan]"""
-            )
-            annotation = input("> ")
-            if annotation == "":
+            triplet = self.get_single_triplet_from_user(sentence)
+            if triplet is None:
                 break
-            try:
-                phrases = [
-                    tuple(int(n) for n in ids.split("_"))
-                    for ids in annotation.split(",")
-                ]
-            except ValueError:
-                console.print("[bold red]Could not parse this:[/bold red]", annotation)
+
+    def _get_single_triplet_from_user(self):
+        annotation = input("> ")
+        if annotation == "":
+            return None
+        try:
+            phrases = [
+                tuple(int(n) for n in ids.split("_")) for ids in annotation.split(",")
+            ]
+            return phrases[0], phrases[1:]
+        except ValueError:
+            console.print("[bold red]Could not parse this:[/bold red]", annotation)
+            return False
+
+    def get_single_triplet_from_user(self, sentence, expect_mappable=True):
+        console.print(
+            """
+            [bold cyan] Enter comma-separated list of predicate and args, with token IDs in each separated by underscores, e.g.: 0_The 1_boy 2_has 3_gone 4_to 5_school -> 2_3,0_1,4_5
+            Press enter to finish.
+            
+            [/bold cyan]"""
+        )
+        graph = self.parsed_graphs[sentence]
+        while True:
+            triplet = self._get_single_triplet_from_user()
+            if triplet is None:
+                # user is done
+                return None
+            if triplet is False:
+                # syntax error
                 continue
 
-            pred, args = phrases[0], phrases[1:]
-            yield pred, args
+            pred, args = triplet
+            mapped_triplet = Triplet(pred, args, graph)
+            if expect_mappable and mapped_triplet.mapped is False:
+                console.print(
+                    f"[bold red] Could not map annotation {triplet} to subedges, please provide alternative (or press ENTER to skip)[/bold red]"
+                )
+                continue
+
+        yield pred, args
 
     def run(self):
         while True:

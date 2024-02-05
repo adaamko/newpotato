@@ -14,7 +14,7 @@ from graphbrain.learner.rule import Rule
 
 from newpotato.datatypes import GraphParse, Triplet
 from newpotato.parser import TextParserClient
-from newpotato.utils import get_variables, matches2triplets
+from newpotato.utils import matches2triplets
 
 
 class AnnotatedWordsNotFoundError(Exception):
@@ -89,25 +89,30 @@ class Extractor:
 
         Args:
             parsed_graphs (Dict[str, Dict[str, Any]]): The parsed graphs.
-            triplets (List[Tuple]): The triplets.
+            text_to_triplets (Dict[str, List[Tuple]]): The texts and corresponding triplets.
         """
         classifier = Classifier()
         for text, triplets in text_to_triplets.items():
             graph = parsed_graphs[text]
-            words = [tok.text for tok in graph["spacy_sentence"]]
-            annotated_graph = graph["main_edge"]
+            main_edge = graph["main_edge"]
             for triplet, positive in triplets:
-                variables = get_variables(annotated_graph, words, triplet)
+                if not triplet.mapped:
+                    logging.warning(
+                        f"trying to map unmapped triplet {triplet} to {graph}"
+                    )
+                    success = triplet.map_to_subgraphs(graph)
+                    if not success:
+                        logging.warning("failed to map triplet, skipping")
+                        continue
+
                 logging.info("adding case:")
-                logging.info(f"graph: {annotated_graph}")
-                logging.info(
-                    f"triplet: {triplet}, variables: {variables}, positive: {positive}"
-                )
+                logging.info(f"{text=}, {main_edge=}")
+                logging.info(f"{triplet=}, {triplet.variables=}, positive: {positive}")
 
                 # positive means whether we want to treat it as a positive or negative example
                 # this helps graphbrain to learn the rules
                 classifier.add_case(
-                    annotated_graph, positive=positive, variables=variables
+                    main_edge, positive=positive, variables=triplet.variables
                 )
 
         self.classifier = classifier
@@ -189,12 +194,12 @@ class HITLManager:
             self.extractor = Extractor()
         else:
             self.extractor = Extractor.from_json(extractor_data)
-        
-        logging.info('HITL manager initialized')
+
+        logging.info("HITL manager initialized")
 
     @staticmethod
     def load(fn):
-        logging.info(f'loading HITL state from {fn=}')
+        logging.info(f"loading HITL state from {fn=}")
         with open(fn) as f:
             data = json.load(f)
         return HITLManager.from_json(data)
@@ -421,17 +426,15 @@ class HITLManager:
     def store_triplet(
         self,
         text: str,
-        pred: Tuple[int, ...],
-        args: List[Tuple[int, ...]],
+        triplet: Triplet,
         positive=True,
     ):
         """
         Store the triplet.
 
         Args:
-            text (str): The text to store the triplet for.
-            pred (Tuple[int, ...]): The predicate.
-            args (List[Tuple[int, ...]]): The arguments.
+            text (str): rhe text to store the triplet for.
+            triplet (Triplet): the triplet to store
             positive (bool): whether to store the triplet as a positive (default) or negative
                 example
         """
@@ -440,55 +443,10 @@ class HITLManager:
             assert (
                 self.latest is not None
             ), "no parsed graphs stored, can't use `latest`"
-            return self.store_triplet(self.latest, pred, args)
+            return self.store_triplet(self.latest, triplet, positive)
         assert self.is_parsed(text), f"unparsed text: {text}"
-        logging.info(f"appending to triplets: {pred}, {args}")
-        self.text_to_triplets[text].append((Triplet(pred, args), positive))
-
-    def store_triplets_from_annotation(self, data: Dict[str, Any]):
-        """
-        Store triplets from annotation.
-
-        Args:
-            data (dict): A dictionary with the keys "sen" and "triplets".
-                Triplet annotations must be provided as a list of dictionaries with the keys
-                "rel" and "args", each of which must be a substring of the sentence.
-        """
-        sen, triplets = self.get_triplets_from_annotation(data)
-        for pred, args in triplets:
-            self.store_triplet(sen, pred, args)
-
-    def get_triplets_from_annotation(self, data: Dict[str, Any]):
-        """
-        Get annotated triplets.
-
-        Args:
-            data (dict): A dictionary with the keys "sen" and "triplets".
-                Triplet annotations must be provided as a list of dictionaries with the keys
-                "rel" and "args", each of which must be a substring of the sentence.
-        Returns:
-            Tuple[str, List[Tuple[Tuple, List[Tuple]]]: the sentence (after parsing)
-                and the list of triplets, as required by store_triplet
-        """
-        logging.debug(f"getting triplets from annotation: {data}")
-        graphs = self.get_graphs(data["sen"])
-        if len(graphs) > 1:
-            print("sentence split into two:", data["sen"])
-            print([graph["text"] for graph in graphs])
-            raise Exception()
-        sen = graphs[0]["text"]
-        triplets = []
-        for triplet in data["triplets"]:
-            try:
-                pred = self.get_toks_from_txt(triplet["rel"], sen)
-                args = [
-                    self.get_toks_from_txt(arg_txt, sen) for arg_txt in triplet["args"]
-                ]
-                triplets.append((pred, args))
-            except AnnotatedWordsNotFoundError as e:
-                logging.warning(f"skipping triplet: {e}")
-
-        return sen, triplets
+        logging.info(f"appending to triplets: {text=}, {triplet=}")
+        self.text_to_triplets[text].append((triplet, positive))
 
     def get_toks_from_txt(self, words_txt: str, sen: str) -> Tuple[int, ...]:
         """
