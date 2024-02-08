@@ -232,8 +232,39 @@ class NPTerminalClient:
             self.hitl.store_triplet(sen, triplet, True)
 
     def annotate(self):
-        for sen in self.hitl.get_unannotated_sentences(random_order=True, max_sens=3):
-            self.get_triplets_from_user(sen)
+        while True:
+            console.print(
+                "Type the start of the sentence you would like to annotate or enter R to get random unannotated sentences. Or press ENTER to return to finish annotating and return to main menu"
+            )
+            raw_query = input("> ")
+            query = raw_query.strip().lower()
+            if not query:
+                break
+            if query == "r":
+                for sen in self.hitl.get_unannotated_sentences(
+                    random_order=True, max_sens=3
+                ):
+                    self.get_triplets_from_user(sen)
+            else:
+                cands = [
+                    sen
+                    for sen in self.hitl.parsed_graphs
+                    if sen.lower().startswith(query)
+                ]
+                if len(cands) > 20:
+                    console.print("more than 20 matches, please refine")
+                    continue
+                for i, sen in enumerate(cands):
+                    console.print(f"{i}\t{sen}")
+
+                console.print("Enter ID of the sentence you want to annotate")
+                choice = input("> ")
+                try:
+                    sen = cands[int(choice)]
+                except (ValueError, IndexError):
+                    console.print("[bold red]invalid choice[/bold red]")
+                else:
+                    self.get_triplets_from_user(sen)
 
     def print_tokens(self, sentence):
         tokens = self.hitl.get_tokens(sentence)

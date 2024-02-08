@@ -541,10 +541,13 @@ class HITLManager:
         Returns:
             List[Dict] a list of hypergraphs corresponding to the matches
         """
-        graph = self.parsed_graphs[sen]
-        main_graph = graph["main_edge"]
-        matches, _ = self.extractor.classify(main_graph)
-        return matches
+        graphs = self.get_graphs(sen)
+        all_matches = []
+        for graph in graphs:
+            main_graph = graph["main_edge"]
+            matches, _ = self.extractor.classify(main_graph)
+            all_matches += matches
+        return all_matches
 
     def extract_triplets_from_text(
         self, text: str, convert_to_text: bool = False
