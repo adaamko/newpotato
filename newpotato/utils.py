@@ -5,14 +5,15 @@ from typing import List, Dict, Any
 
 from graphbrain.hyperedge import Hyperedge
 
+from newpotato.constants import NON_WORD_ATOMS
 from newpotato.datatypes import Triplet
-
-NON_WORD_ATOMS = {"list/J/.", "+/B.am/.", "+/B.mm/."}
 
 
 def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
     """
     find IDs of tokens covered by an edge of a graph
+    If some atom names match more than one token, candidate token sequences are disambiguated
+    based on length and the shortest sequence (i.e. the one with the fewest gaps) is returned
 
     Args:
         edge (Hyperedge): the Graphbrain Hyperedge to be mapped to token IDs
@@ -44,16 +45,16 @@ def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
                 to_disambiguate.append([graph["atom2word"][cand][1] for cand in cands])
 
     if len(to_disambiguate) > 0:
-        hyp_sets = set()
+        logging.debug(f'edge2toks disambiguation needed: {toks=}, {to_disambiguate=}')
+        hyp_sets = []
         for cand in itertools.product(*to_disambiguate):
-            hyp_set = toks | set(cand)
-            # https://stackoverflow.com/a/33575259/2753770
-            if sorted(hyp_set) == list(range(min(hyp_set), max(hyp_set) + 1)):
-                hyp_sets.add(tuple(sorted(hyp_set)))
-        if len(hyp_sets) > 1:
-            logging.warning(f"cannot disambiguate: {edge=}, {hyp_sets=}, {graph=}")
-        for tok in list(hyp_sets)[0]:
-            toks.add(tok)
+            hyp_toks = sorted(toks | set(cand))
+            hyp_length = hyp_toks[-1] - hyp_toks[0]
+            hyp_sets.append((hyp_length, hyp_toks))
+        
+        shortest_hyp = sorted(hyp_sets)[0][1]
+        logging.debug(f'{shortest_hyp=}')
+        return set(shortest_hyp)
 
     return tuple(sorted(toks))
 

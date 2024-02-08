@@ -433,7 +433,7 @@ class HITLManager:
         Store the triplet.
 
         Args:
-            text (str): rhe text to store the triplet for.
+            text (str): the text to store the triplet for.
             triplet (Triplet): the triplet to store
             positive (bool): whether to store the triplet as a positive (default) or negative
                 example

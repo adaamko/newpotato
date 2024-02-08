@@ -1,8 +1,11 @@
 import logging
-from typing import Set, Tuple
+from collections import defaultdict
+from typing import Dict, Set, Tuple
 
 from graphbrain.hyperedge import hedge, Hyperedge, unique
 from spacy.tokens.doc import Doc
+
+from newpotato.constants import NON_ATOM_WORDS, NON_WORD_ATOMS
 
 
 class GraphParse(dict):
@@ -60,48 +63,74 @@ class GraphParse(dict):
         }
 
 
-def _text2subedge(edge: Hyperedge, words: Set[str]) -> Tuple[Hyperedge, Set[str]]:
+def _toks2subedge(
+    edge: Hyperedge,
+    toks_to_cover: Tuple[int],
+    all_toks: Tuple[int],
+    words_to_i: Dict[str, Set[int]],
+) -> Tuple[Hyperedge, Set[str]]:
     """
-    recursive helper function of text2subedge
+    recursive helper function of toks2subedge
 
     Args:
         edge (Hyperedge): the Graphbrain Hyperedge in which to look for the subedge
-        words (set): the words to be covered by the subedge
+        words (tuple): the tokens to be covered by the subedge
+        all_toks (tuple): all tokens in the sentence
+        words_to_i (dict): words mapped to token indices
 
     Returns:
         Hyperedge: the best matching subedge
-        set: words covered by the matching hyperedge
+        set: tokens covered by the matching hyperedge
+        set: additional tokens in the matching hyperedge
     """
     if edge.is_atom():
         lowered_word = edge.label().lower()
-        if lowered_word in words:
-            # an edge matching one word
-            return edge, set([lowered_word]), set()
-        return edge, set(), set([lowered_word])
+        if lowered_word not in words_to_i:
+            assert (
+                lowered_word in NON_WORD_ATOMS
+            ), f"no token corresponding to edge label {lowered_word} and it is not listed as a non-word atom"
 
-    relevant_words, irrelevant_words = set(), set()
+        toks = words_to_i[lowered_word]
+        relevant_toks = toks & toks_to_cover
+        if len(relevant_toks) > 0:
+            return edge, relevant_toks, set()
+        else:
+            return edge, set(), toks
+
+    relevant_toks, irrelevant_toks = set(), set()
     relevant_subedges = []
     for subedge in edge:
-        s_edge, subedge_relevant_words, subedge_irrelevant_words = _text2subedge(subedge, words)
-        if subedge_relevant_words == words:
+        s_edge, subedge_relevant_toks, subedge_irrelevant_toks = _toks2subedge(
+            subedge, toks_to_cover, all_toks, words_to_i
+        )
+        if subedge_relevant_toks == toks_to_cover:
             # a subedge covering everything, search can stop
-            return s_edge, subedge_relevant_words, set()
-        
-        if len(subedge_relevant_words) > 0:
-            relevant_words |= subedge_relevant_words
+            return s_edge, subedge_relevant_toks, set()
+
+        if len(subedge_relevant_toks) > 0:
+            relevant_toks |= subedge_relevant_toks
             relevant_subedges.append(s_edge)
-            irrelevant_words_of_last_relevant_edge = subedge_irrelevant_words
-        irrelevant_words |= subedge_irrelevant_words
+            irrelevant_toks_of_last_relevant_edge = subedge_irrelevant_toks
+        irrelevant_toks |= subedge_irrelevant_toks
 
     if len(relevant_subedges) == 1:
         # only one relevant subedge
-        return relevant_subedges[0], relevant_words, irrelevant_words_of_last_relevant_edge
+        return (
+            relevant_subedges[0],
+            relevant_toks,
+            irrelevant_toks_of_last_relevant_edge,
+        )
 
     # more than one relevant subedge OR no words covered
-    return edge, relevant_words, irrelevant_words
+    return edge, relevant_toks, irrelevant_toks
 
 
-def text2subedge(edge: Hyperedge, words: Set[str]) -> Hyperedge:
+def toks2subedge(
+    edge: Hyperedge,
+    toks: Tuple[int],
+    all_toks: Tuple[int],
+    words_to_i: Dict[str, Set[int]],
+) -> Hyperedge:
     """
     find subedge in edge corresponding to the phrase in text.
     Based on graphbrain.learner.text2subedge, but keeps track of the set of words covered
@@ -117,15 +146,19 @@ def text2subedge(edge: Hyperedge, words: Set[str]) -> Hyperedge:
         Hyperedge: the best matching hyperedge
         bool: whether the matching edge is exact (contains all the words and no other words)
     """
-    lowered_words = set(word.lower() for word in words)
-    subedge, relevant_words, irrelevant_words = _text2subedge(edge, lowered_words)
-    logging.debug(f'text2subedge: {subedge=}, {relevant_words=}, {irrelevant_words=}')
 
-    if lowered_words == relevant_words:
-        if len(irrelevant_words) == 0:
-            return subedge, True
-        return subedge, False
+    toks_to_cover = {tok for tok in toks if all_toks[tok].lower() not in NON_ATOM_WORDS}
+    subedge, relevant_toks, irrelevant_toks = _toks2subedge(
+        edge, toks_to_cover, all_toks, words_to_i
+    )
+    logging.debug(f"toks2subedge: {subedge=}, {relevant_toks=}, {irrelevant_toks=}")
+
+    if toks_to_cover == relevant_toks:
+        if len(irrelevant_toks) == 0:
+            return subedge, relevant_toks, True
+        return subedge, relevant_toks, False
     else:
+        words = [all_toks[t] for t in toks]
         raise ValueError(f"hyperedge {edge} does not contain all words in {words}")
 
 
@@ -172,29 +205,38 @@ class Triplet:
             return f"{self.pred=}, {self.args=}"
 
     def map_to_subgraphs(self, sen_graph, strict=True):
-        words = [tok.text for tok in sen_graph["spacy_sentence"]]
-
-        def phrase2words(phrase):
-            return set(words[i] for i in phrase)
+        """
+        map predicate and arguments of a triplet (each a tuple of token indices) to
+        corresponding subgraphs (Hyperedges). The mapping may change the indices, since words
+        not showing up in the hypergraph (e.g. punctuation) are not to be considered part of the triplet
+        """
+        all_toks = tuple(tok.text for tok in sen_graph["spacy_sentence"])
+        words_to_i = defaultdict(set)
+        for i, word in enumerate(all_toks):
+            words_to_i[word.lower()].add(i)
 
         edge = sen_graph["main_edge"]
-        rel_edge, exact_match = text2subedge(edge, phrase2words(self.pred))
+        rel_edge, relevant_toks, exact_match = toks2subedge(edge, self.pred, all_toks, words_to_i)
         if not exact_match and strict:
             logging.warning(
                 f"cannot map pred {self.pred} to subedge of {edge} (closest: {rel_edge}"
             )
             return False
         variables = {"REL": rel_edge}
+        self.pred = tuple(sorted(relevant_toks))
 
-        for i, arg in enumerate(self.args):
-            arg_edge, exact_match = text2subedge(edge, phrase2words(arg))
+        mapped_args = []
+        for i in range(len(self.args)):
+            arg_edge, relevant_toks, exact_match = toks2subedge(edge, self.args[i], all_toks, words_to_i)
             if not exact_match and strict:
                 logging.warning(
-                    f"cannot map arg {arg} to subedge of {edge} (closest: {rel_edge}"
+                    f"cannot map arg {self.args[i]} to subedge of {edge} (closest: {rel_edge}"
                 )
                 return False
             variables[f"ARG{i}"] = arg_edge
+            mapped_args.append(tuple(sorted(relevant_toks)))
 
+        self.args = tuple(mapped_args)
         self.variables = variables
         self.mapped = True
         self.sen_graph = sen_graph
