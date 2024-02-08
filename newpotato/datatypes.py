@@ -8,6 +8,10 @@ from spacy.tokens.doc import Doc
 from newpotato.constants import NON_ATOM_WORDS, NON_WORD_ATOMS
 
 
+class UnmappableTripletError(Exception):
+    pass
+
+
 class GraphParse(dict):
     """A class to handle Graphbrain graphs.
 
@@ -146,8 +150,11 @@ def toks2subedge(
         Hyperedge: the best matching hyperedge
         bool: whether the matching edge is exact (contains all the words and no other words)
     """
-
-    toks_to_cover = {tok for tok in toks if all_toks[tok].lower() not in NON_ATOM_WORDS}
+    try:
+        toks_to_cover = {tok for tok in toks if all_toks[tok].lower() not in NON_ATOM_WORDS}
+    except IndexError:
+        logging.warning(f"some token IDs out of range: {toks=}, {all_toks=}")
+        raise UnmappableTripletError()
     subedge, relevant_toks, irrelevant_toks = _toks2subedge(
         edge, toks_to_cover, all_toks, words_to_i
     )
@@ -158,8 +165,9 @@ def toks2subedge(
             return subedge, relevant_toks, True
         return subedge, relevant_toks, False
     else:
-        words = [all_toks[t] for t in toks]
-        raise ValueError(f"hyperedge {edge} does not contain all words in {words}")
+        words = [all_toks[t] for t in toks_to_cover]
+        logging.warning(f"hyperedge {edge} does not contain all words in {words}\n{toks_to_cover=}, {relevant_toks=}")
+        raise UnmappableTripletError()
 
 
 class Triplet:
@@ -204,11 +212,9 @@ class Triplet:
         else:
             return f"{self.pred=}, {self.args=}"
 
-    def map_to_subgraphs(self, sen_graph, strict=True):
+    def _map_to_subgraphs(self, sen_graph, strict=True):
         """
-        map predicate and arguments of a triplet (each a tuple of token indices) to
-        corresponding subgraphs (Hyperedges). The mapping may change the indices, since words
-        not showing up in the hypergraph (e.g. punctuation) are not to be considered part of the triplet
+        helper function for map_to_subgraphs
         """
         all_toks = tuple(tok.text for tok in sen_graph["spacy_sentence"])
         words_to_i = defaultdict(set)
@@ -216,28 +222,46 @@ class Triplet:
             words_to_i[word.lower()].add(i)
 
         edge = sen_graph["main_edge"]
-        rel_edge, relevant_toks, exact_match = toks2subedge(edge, self.pred, all_toks, words_to_i)
+        rel_edge, relevant_toks, exact_match = toks2subedge(
+            edge, self.pred, all_toks, words_to_i
+        )
         if not exact_match and strict:
             logging.warning(
                 f"cannot map pred {self.pred} to subedge of {edge} (closest: {rel_edge}"
             )
-            return False
+            raise UnmappableTripletError
         variables = {"REL": rel_edge}
-        self.pred = tuple(sorted(relevant_toks))
+        mapped_pred = tuple(sorted(relevant_toks))
 
         mapped_args = []
         for i in range(len(self.args)):
-            arg_edge, relevant_toks, exact_match = toks2subedge(edge, self.args[i], all_toks, words_to_i)
+            arg_edge, relevant_toks, exact_match = toks2subedge(
+                edge, self.args[i], all_toks, words_to_i
+            )
             if not exact_match and strict:
                 logging.warning(
                     f"cannot map arg {self.args[i]} to subedge of {edge} (closest: {rel_edge}"
                 )
-                return False
+                raise UnmappableTripletError()
             variables[f"ARG{i}"] = arg_edge
             mapped_args.append(tuple(sorted(relevant_toks)))
 
-        self.args = tuple(mapped_args)
-        self.variables = variables
-        self.mapped = True
-        self.sen_graph = sen_graph
-        return True
+        return mapped_pred, mapped_args, variables
+
+    def map_to_subgraphs(self, sen_graph, strict=True):
+        """
+        map predicate and arguments of a triplet (each a tuple of token indices) to
+        corresponding subgraphs (Hyperedges). The mapping may change the indices, since words
+        not showing up in the hypergraph (e.g. punctuation) are not to be considered part of the triplet
+        """
+        try:
+            mapped_pred, mapped_args, variables = self._map_to_subgraphs(sen_graph, strict=strict)
+        except UnmappableTripletError:
+            logging.warning(f'could not map triplet ({self.pred=}, {self.args=} to {sen_graph=}')
+            return False
+        else:
+            self.args = tuple(mapped_args)
+            self.variables = variables
+            self.mapped = True
+            self.sen_graph = sen_graph
+            return True

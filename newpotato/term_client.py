@@ -200,20 +200,29 @@ class NPTerminalClient:
             raise Exception()
         sen_graph = graphs[0]
         sen = sen_graph["text"]
-        for triplet in data["triplets"]:
+        for text_triplet in data["triplets"]:
             try:
-                pred = self.hitl.get_toks_from_txt(triplet["rel"], sen)
+                pred = self.hitl.get_toks_from_txt(text_triplet["rel"], sen)
                 args = [
                     self.hitl.get_toks_from_txt(arg_txt, sen)
-                    for arg_txt in triplet["args"]
+                    for arg_txt in text_triplet["args"]
                 ]
                 triplet = Triplet(pred, args, sen_graph)
             except AnnotatedWordsNotFoundError:
                 triplet = None
 
             if triplet is None or not triplet.mapped:
+                if triplet is None:
+                    console.print(
+                        f"[bold red]Could not find all words of annotation: pred={text_triplet['rel']}, args={text_triplet['args']}[/bold red]"
+                    )
+                else:
+                    console.print(
+                        f"[bold red]Could not map annotation {self.hitl.triplet_to_str(triplet, sen)} to subedges)[/bold red]"
+                    )
+
                 console.print(
-                    f"[bold red] Could not map annotation {self.hitl.triplet_to_str(triplet, sen)} to subedges, please provide alternative (or press ENTER to skip)[/bold red]"
+                    "[bold red]Please provide alternative (or press ENTER to skip)[/bold red]"
                 )
                 self.print_tokens(sen)
                 triplet = self.get_single_triplet_from_user(sen)
