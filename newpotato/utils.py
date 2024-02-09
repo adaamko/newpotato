@@ -80,13 +80,12 @@ def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
         strs_to_atoms[atom.to_str()].append(atom)
 
     to_disambiguate = []
-
     for atom in edge.all_atoms():
         atom_str = atom.to_str()
         if atom_str not in strs_to_atoms:
             assert (
                 str(atom) in NON_WORD_ATOMS
-            ), f'no token corresponding to atom "{atom}"'
+            ), f'no token corresponding to {atom=} in {strs_to_atoms=}'
         else:
             cands = strs_to_atoms[atom_str]
             if len(cands) == 1:
@@ -135,6 +134,7 @@ def get_variables(
             for i, arg in enumerate(args)
         }
     )
+    logging.debug('mapped')
     return variables
 
 
@@ -157,8 +157,9 @@ def matches2triplets(matches: List[Dict], graph: Dict[str, Any]) -> List[Triplet
             if key == "REL":
                 pred = edge2toks(edge, graph)
             else:
-                args.append(edge2toks(edge, graph))
-
-        triplets.append(Triplet(pred, args))
+                args.append((int(key[-1]), edge2toks(edge, graph)))
+        
+        sorted_args = [arg[1] for arg in sorted(args)]
+        triplets.append(Triplet(pred, sorted_args))
 
     return triplets

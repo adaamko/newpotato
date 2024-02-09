@@ -1,4 +1,4 @@
-from newpotato.hitl import TextParser
+from newpotato.parser import TextParser
 
 
 def test_parser():
