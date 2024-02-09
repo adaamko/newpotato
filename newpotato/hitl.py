@@ -7,18 +7,14 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Generator
 
-import spacy
-from fastcoref import spacy_component
 from graphbrain.hyperedge import Hyperedge
 from graphbrain.learner.classifier import Classifier
 from graphbrain.learner.classifier import from_json as classifier_from_json
 from graphbrain.learner.rule import Rule
-from graphbrain.parsers import create_parser
 
 from newpotato.datatypes import GraphParse, Triplet
+from newpotato.parser import TextParserClient
 from newpotato.utils import get_variables, matches2triplets
-
-assert spacy_component  # silence flake8
 
 
 class AnnotatedWordsNotFoundError(Exception):
@@ -31,80 +27,6 @@ class AnnotatedWordsNotFoundError(Exception):
         self.words_txt = words_txt
         self.sen = sen
         self.pattern = pattern
-
-
-@dataclass
-class TextParser:
-    """A class to handle text parsing using Graphbrain."""
-
-    @staticmethod
-    def from_params(params: Dict[str, Any]):
-        if params is None:
-            return TextParser()
-        else:
-            return TextParser(**params)
-
-    def __init__(self, lang: str = "en", corefs: bool = True):
-        self.lang = lang
-        self.corefs = corefs
-        self.init_parser()
-
-    def init_parser(self):
-        self.parser = create_parser(lang=self.lang)
-        if self.corefs:
-            self.coref_nlp = spacy.load(
-                "en_core_web_sm", exclude=["parser", "lemmatizer", "ner", "textcat"]
-            )
-            self.coref_nlp.add_pipe("fastcoref")
-
-    def get_params(self) -> Dict[str, Any]:
-        return {"lang": self.lang, "corefs": self.corefs}
-
-    def resolve_coref(self, text: str) -> str:
-        """
-        Run coreference resolution and return text with resolved coreferences
-
-        Args:
-            text (str): The text to resolve
-
-        Returns:
-            str: The resolved text
-        """
-
-        doc = self.coref_nlp(text, component_cfg={"fastcoref": {"resolve_text": True}})
-        return doc._.resolved_text
-
-    def parse(self, text: str) -> List[Dict[str, Any]]:
-        """
-        Parse the given text using Graphbrain and return the parsed edges.
-
-        Args:
-            text (str): The text to parse.
-
-        Returns:
-            List[Dict[str, Any]]: The parsed edges.
-        """
-
-        paragraphs = text.split("\n\n")
-        graphs = []
-
-        for paragraph in paragraphs:
-            resolved_text = self.resolve_coref(paragraph) if self.corefs else paragraph
-
-            parses = self.parser.parse(resolved_text)["parses"]
-
-            # for each graph, add word2atom from atom2word
-            # only storing the id of the word, not the word itself
-            for graph in parses:
-                # atom2word is a dict of atom: (word, word_id)
-                atom2word = graph["atom2word"]
-
-                word2atom = {word[1]: str(atom) for atom, word in atom2word.items()}
-                graph["word2atom"] = word2atom
-
-            graphs.extend(parses)
-
-        return graphs
 
 
 @dataclass
@@ -244,9 +166,19 @@ class HITLManager:
         triplets: Dict[str, List[Tuple]] = None,
         latest: Optional[str] = None,
         extractor_data: Optional[Extractor] = None,
+        parser_url: Optional[str] = "http://localhost:7277",
         parser_params: Optional[Dict[str, Any]] = None,
-        parser: Optional[TextParser] = None,
+        parser_client: Optional[TextParserClient] = None,
     ):
+
+        if parser_client is not None:
+            self.text_parser = parser_client
+        else:
+            self.text_parser = TextParserClient(parser_url)
+
+        if parser_params:
+            self.text_parser.check_params(parser_params)
+
         self.parsed_graphs = {} if parsed_graphs is None else parsed_graphs
         self.text_to_triplets = (
             defaultdict(list) if triplets is None else defaultdict(list, triplets)
@@ -257,23 +189,18 @@ class HITLManager:
             self.extractor = Extractor()
         else:
             self.extractor = Extractor.from_json(extractor_data)
-
-        if parser is None:
-            self.text_parser = TextParser.from_params(parser_params)
-        else:
-            assert (
-                parser_params is None
-            ), "parser and parser_params cannot both be specified"
-            self.text_parser = parser
+        
+        logging.info('HITL manager initialized')
 
     @staticmethod
     def load(fn):
+        logging.info(f'loading HITL state from {fn=}')
         with open(fn) as f:
             data = json.load(f)
         return HITLManager.from_json(data)
 
     @staticmethod
-    def from_json(data: Dict[str, Any]):
+    def from_json(data: Dict[str, Any], parser_url="http://localhost:7277"):
         """
         load HITLManager from saved state
 
@@ -283,8 +210,10 @@ class HITLManager:
         Returns:
             HITLManager: a new HITLManager object with the restored state
         """
-        parser = TextParser.from_params(data["parser_params"])
-        spacy_vocab = parser.parser.nlp.vocab
+        parser_client = TextParserClient(parser_url)
+        parser_client.check_params(data["parser_params"])
+
+        spacy_vocab = parser_client.get_vocab()
         parsed_graphs = {
             text: GraphParse.from_json(graph_dict, spacy_vocab)
             for text, graph_dict in data["parsed_graphs"].items()
@@ -298,7 +227,7 @@ class HITLManager:
             parsed_graphs=parsed_graphs,
             triplets=triplets,
             extractor_data=data["extractor_data"],
-            parser=parser,
+            parser_client=parser_client,
         )
         return hitl
 
@@ -347,7 +276,7 @@ class HITLManager:
             "n_rules": n_rules,
         }
 
-    def parse_text(self, text: str) -> List[Dict[str, Any]]:
+    def parse_text(self, text: str) -> List[GraphParse]:
         """
         Parse the given text.
 
@@ -484,8 +413,8 @@ class HITLManager:
         graphs = self.parse_text(text)
         for graph in graphs:
             self.latest = text
-            self.parsed_graphs[graph["text"]] = GraphParse(graph)
-            self.parsed_graphs["latest"] = GraphParse(graph)
+            self.parsed_graphs[graph["text"]] = graph
+            self.parsed_graphs["latest"] = graph
 
         return graphs
 
@@ -573,9 +502,9 @@ class HITLManager:
         Returns:
             Tuple[int, ...] the tokens of the sentence corresponding to the substring
         """
-        logging.debug(f"words_txt: {words_txt}, sen: {sen}")
-
-        pattern = re.escape(re.sub("[()]", "", words_txt))
+        logging.debug(f"{words_txt=}, {sen=}")
+        pattern = re.escape(re.sub('["()]', "", words_txt))
+        logging.debug(f"{pattern=}")
         if pattern[0].isalpha():
             pattern = r"\b" + pattern
         if pattern[-1].isalpha():

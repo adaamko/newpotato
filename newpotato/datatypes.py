@@ -52,7 +52,7 @@ class GraphParse(dict):
             "main_edge": self["main_edge"].to_str(),
             "resolved_corefs": self["resolved_corefs"].to_str(),
             "text": self["text"],
-            "word2atom": self["word2atom"],
+            "word2atom": {word: atom.to_str() for word, atom in self["word2atom"].items()},
             "failed": self["failed"],
         }
 

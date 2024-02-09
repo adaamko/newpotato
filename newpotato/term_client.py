@@ -22,6 +22,9 @@ class NPTerminalClient:
             console.print(f"loading HITL state from {args.load_state}")
             self.hitl = HITLManager.load(args.load_state)
 
+        if args.upload_file:
+            self._upload_file(args.upload_file)
+
     def load_from_file(self):
         while True:
             console.print("[bold cyan]Enter path to HITL state file:[/bold cyan]")
@@ -149,9 +152,7 @@ class NPTerminalClient:
         sen = input("> ")
         self.hitl.get_graphs(sen)
 
-    def upload_file(self):
-        console.print("[bold cyan]Enter path of txt or jsonl file:[/bold cyan]")
-        fn = input("> ")
+    def _upload_file(self, fn):
         if fn.endswith("txt"):
             self.upload_txt(fn)
         elif fn.endswith("jsonl"):
@@ -160,6 +161,11 @@ class NPTerminalClient:
             console.print(
                 "[bold red]Unknown file format, must be txt or jsonl[/bold red]"
             )
+
+    def upload_file(self):
+        console.print("[bold cyan]Enter path of txt or jsonl file:[/bold cyan]")
+        fn = input("> ")
+        self._upload_file(fn)
 
     def upload_txt(self, fn):
         console.print("[bold cyan]Parsing text...[/bold cyan]")
@@ -270,6 +276,7 @@ def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-l", "--load_state", default=None, type=str)
+    parser.add_argument("-u", "--upload_file", default=None, type=str)
     return parser.parse_args()
 
 
