@@ -85,7 +85,7 @@ class TextParser:
                 # atom2word is a dict of atom: (word, word_id)
                 atom2word = graph["atom2word"]
 
-                word2atom = {word[1]: str(atom) for atom, word in atom2word.items()}
+                word2atom = {word[1]: atom for atom, word in atom2word.items()}
                 graph["word2atom"] = word2atom
                 graphs.append(GraphParse(graph))
 
