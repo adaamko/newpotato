@@ -1,7 +1,7 @@
 import itertools
 import logging
 from collections import defaultdict
-from typing import List, Dict, Any, Tuple
+from typing import Any, Dict, List, Tuple
 
 import editdistance
 from graphbrain.hyperedge import Hyperedge

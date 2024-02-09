@@ -2,10 +2,9 @@ import json
 import logging
 import random
 import re
-
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Generator
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 import spacy
 from fastcoref import spacy_component
