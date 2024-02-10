@@ -4,7 +4,7 @@ from collections import defaultdict
 import requests
 import streamlit as st
 from graphbrain import hedge
-from graphbrain.notebook import * # noqa
+from graphbrain.notebook import *  # noqa
 from graphbrain.notebook import _edge2html_vblocks
 from st_cytoscape import cytoscape
 from streamlit_text_annotation import text_annotation
@@ -12,7 +12,9 @@ from streamlit_text_annotation import text_annotation
 API_URL = "http://localhost:8000"
 
 
-def api_request(method: str, endpoint: str, payload: dict = None, query_params: dict = None):
+def api_request(
+    method: str, endpoint: str, payload: dict = None, query_params: dict = None
+):
     """Generic API request function.
 
     Args:
@@ -345,8 +347,15 @@ def main():
                     ][-1]["args"],
                 }
                 response = api_request("POST", "annotate", payload)
-                if response:
+                if response["status"] == "ok":
                     st.success("Annotation added successfully.")
+                elif response["status"] == "error":
+                    st.error(
+                        "Could not map the annotation to the sentence, please look at the graph and try again: "
+                    )
+                    with st.expander("Graph"):
+                        html = _edge2html_vblocks(hedge(response["graph"]["main_edge"]))
+                        st.write(html, unsafe_allow_html=True)
 
     with view_rules:
         # Annotated Graphs

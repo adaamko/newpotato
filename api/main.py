@@ -73,7 +73,11 @@ def annotate_text(annotation: Annotation) -> Dict[str, Any]:
         triplet = Triplet(annotation.pred, annotation.args, graph)
         if not triplet.mapped:
             logging.warning("Triplet not mapped.")
-            raise HTTPException(status_code=400, detail="Triplet not mapped")
+            return {
+                "status": "error",
+                "detail": "Triplet not mapped",
+                "graph": graph.to_json(),
+            }
 
         hitl_manager.store_triplet(annotation.text, triplet, True)
 
