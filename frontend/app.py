@@ -53,7 +53,19 @@ def fetch_tokens(sentence: str):
     Returns:
         list: List of tokens.
     """
-    return api_request("GET", f"tokens/", query_params={"text": sentence})["tokens"]
+    return api_request("GET", "tokens/", query_params={"text": sentence})["tokens"]
+
+
+def fetch_triplets(sentence: str):
+    """Fetch triplets from the API.
+
+    Args:
+        sentence (str): Sentence to fetch triplets for.
+
+    Returns:
+        list: List of triplets.
+    """
+    return api_request("GET", "triplets/", query_params={"text": sentence})["triplets"]
 
 
 def fetch_rules():
@@ -297,12 +309,9 @@ def main():
     if "knowledge_graph" not in st.session_state:
         st.session_state["knowledge_graph"] = None
 
-    home, add_sentence, annotate, view_rules, inference = st.tabs(
-        ["Home", "Add Sentence", "Annotate", "View Rules", "Inference"]
+    add_sentence, annotate, view_rules, inference = st.tabs(
+        ["Add Sentence", "Annotate", "View Rules", "Inference"]
     )
-
-    with home:
-        st.write("Welcome to the NewPotato HITL system.")
 
     with add_sentence:
         upload_text = upload_text_file()
@@ -356,6 +365,13 @@ def main():
                     with st.expander("Graph"):
                         html = _edge2html_vblocks(hedge(response["graph"]["main_edge"]))
                         st.write(html, unsafe_allow_html=True)
+
+            current_annotations = fetch_triplets(selected_sentence)
+
+            if current_annotations:
+                st.write("Current Annotations:")
+                for _, _, annotation_str in current_annotations:
+                    st.write(f"{annotation_str}")
 
     with view_rules:
         # Annotated Graphs

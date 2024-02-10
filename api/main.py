@@ -111,6 +111,34 @@ def get_tokens(text: str) -> Dict[str, Any]:
     return {"tokens": indexed_tokens}
 
 
+# Get annotated triplets
+@app.get("/triplets")
+def get_triplets(text: str) -> Dict[str, Any]:
+    """Retrieves annotated triplets.
+
+    Returns:
+        Dict[str, Any]: Dictionary containing annotated triplets.
+    """
+    logging.info("Initiating annotated triplets retrieval.")
+    try:
+        sen_to_triplets = hitl_manager.get_true_triplets()
+
+        if text not in sen_to_triplets:
+            logging.warning(f"No annotated triplets found for text: {text}")
+            return {"triplets": []}
+        triplets = [
+            (triplet.pred, triplet.args, str(triplet))
+            for triplet in sen_to_triplets[text]
+        ]
+
+        print(triplets)
+        logging.info("Annotated triplets retrieval successful.")
+        return {"triplets": triplets}
+    except Exception as e:
+        logging.error(f"Error retrieving annotated triplets: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Sentence Retrieval Endpoints
 @app.get("/sentences")
 def get_sentences() -> Dict[str, List[str]]:
