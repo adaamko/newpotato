@@ -276,6 +276,8 @@ class NPTerminalClient:
             triplet = self.get_single_triplet_from_user(sentence)
             if triplet is None:
                 break
+            else:
+                self.hitl.store_triplet(sentence, triplet, True)
 
     def _get_single_triplet_from_user(self):
         annotation = input("> ")
