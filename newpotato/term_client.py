@@ -62,7 +62,7 @@ class NPTerminalClient:
     def suggest_triplets(self):
         for sen in self.hitl.get_unannotated_sentences():
             for triplet in self.hitl.infer_triplets(sen):
-                triplet_str = self.hitl.triplet_to_str(triplet, sen)
+                triplet_str = str(triplet)
                 console.print("[bold yellow]How about this?[/bold yellow]")
                 console.print(f"[bold yellow]{sen}[/bold yellow]")
                 console.print(f"[bold yellow]{triplet_str}[/bold yellow]")
@@ -127,9 +127,7 @@ class NPTerminalClient:
             if max_n is not None and i > max_n:
                 table.add_row("...", "...")
                 break
-            triplet_strs = [
-                self.hitl.triplet_to_str(triplet, sen) for triplet in triplets
-            ]
+            triplet_strs = [str(triplet) for triplet in triplets]
             table.add_row(sen, "\n".join(triplet_strs))
 
         console.print(table)
@@ -218,7 +216,7 @@ class NPTerminalClient:
                     )
                 else:
                     console.print(
-                        f"[bold red]Could not map annotation {self.hitl.triplet_to_str(triplet, sen)} to subedges)[/bold red]"
+                        f"[bold red]Could not map annotation {str(triplet)} to subedges)[/bold red]"
                     )
 
                 console.print(

@@ -203,7 +203,7 @@ class Triplet:
         return hash((self.pred, self.args))
 
     def to_str(self, graph):
-        toks = self.get_tokens(graph)
+        toks = [tok for tok in graph["spacy_sentence"]]
         pred_phrase = "_".join(toks[a].text for a in self.pred)
         args_str = ", ".join(
             "_".join(toks[a].text for a in phrase) for phrase in self.args
