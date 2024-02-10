@@ -1,5 +1,6 @@
 from rich.console import Console
 
+from newpotato.datatypes import Triplet
 from newpotato.hitl import HITLManager
 from newpotato.utils import matches2triplets
 
@@ -10,7 +11,8 @@ def test_subedge2toks():
     sen1 = "John loves Mary"
     hitl.get_graphs(sen1)[0]
     pred, args = (1,), [(0,), (2,)]
-    hitl.store_triplet(sen1, pred, args)
+    triplet = Triplet(pred, args)
+    hitl.store_triplet(sen1, triplet)
 
     annotated_graphs = hitl.get_annotated_graphs()
     rules = hitl.get_rules(learn=True)

@@ -2,7 +2,7 @@ import logging
 from collections import defaultdict
 from typing import Dict, Set, Tuple
 
-from graphbrain.hyperedge import hedge, Hyperedge, unique
+from graphbrain.hyperedge import Hyperedge, hedge, unique
 from spacy.tokens.doc import Doc
 
 from newpotato.constants import NON_ATOM_WORDS, NON_WORD_ATOMS
@@ -151,7 +151,9 @@ def toks2subedge(
         bool: whether the matching edge is exact (contains all the words and no other words)
     """
     try:
-        toks_to_cover = {tok for tok in toks if all_toks[tok].lower() not in NON_ATOM_WORDS}
+        toks_to_cover = {
+            tok for tok in toks if all_toks[tok].lower() not in NON_ATOM_WORDS
+        }
     except IndexError:
         logging.warning(f"some token IDs out of range: {toks=}, {all_toks=}")
         raise UnmappableTripletError()
@@ -166,7 +168,9 @@ def toks2subedge(
         return subedge, relevant_toks, False
     else:
         words = [all_toks[t] for t in toks_to_cover]
-        logging.warning(f"hyperedge {edge} does not contain all words in {words}\n{toks_to_cover=}, {relevant_toks=}")
+        logging.warning(
+            f"hyperedge {edge} does not contain all words in {words}\n{toks_to_cover=}, {relevant_toks=}"
+        )
         raise UnmappableTripletError()
 
 
@@ -255,9 +259,13 @@ class Triplet:
         not showing up in the hypergraph (e.g. punctuation) are not to be considered part of the triplet
         """
         try:
-            mapped_pred, mapped_args, variables = self._map_to_subgraphs(sen_graph, strict=strict)
+            mapped_pred, mapped_args, variables = self._map_to_subgraphs(
+                sen_graph, strict=strict
+            )
         except UnmappableTripletError:
-            logging.warning(f'could not map triplet ({self.pred=}, {self.args=} to {sen_graph=}')
+            logging.warning(
+                f"could not map triplet ({self.pred=}, {self.args=} to {sen_graph=}"
+            )
             return False
         else:
             self.args = tuple(mapped_args)

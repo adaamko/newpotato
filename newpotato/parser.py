@@ -1,15 +1,13 @@
 import logging
-import requests
 from typing import Any, Dict, List, Optional
 
-
+import requests
+import spacy
 from fastcoref import spacy_component
 from graphbrain.parsers import create_parser
-import spacy
 from spacy.vocab import Vocab
 
 from newpotato.datatypes import GraphParse
-
 
 assert spacy_component  # silence flake8
 
@@ -114,7 +112,9 @@ class TextParserClient:
         return response.json()["params"]
 
     def check_params(self, params):
-        response = requests.request("POST", f"{self.url}/check_params", json={"params": params})
+        response = requests.request(
+            "POST", f"{self.url}/check_params", json={"params": params}
+        )
         if response.status_code == 200:
             return True
         return False
