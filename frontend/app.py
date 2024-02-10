@@ -4,7 +4,7 @@ from collections import defaultdict
 import requests
 import streamlit as st
 from graphbrain import hedge
-from graphbrain.notebook import *
+from graphbrain.notebook import * # noqa
 from graphbrain.notebook import _edge2html_vblocks
 from st_cytoscape import cytoscape
 from streamlit_text_annotation import text_annotation
@@ -12,7 +12,7 @@ from streamlit_text_annotation import text_annotation
 API_URL = "http://localhost:8000"
 
 
-def api_request(method: str, endpoint: str, payload: dict = None):
+def api_request(method: str, endpoint: str, payload: dict = None, query_params: dict = None):
     """Generic API request function.
 
     Args:
@@ -24,7 +24,8 @@ def api_request(method: str, endpoint: str, payload: dict = None):
         dict: Response.
     """
     url = f"{API_URL}/{endpoint}"
-    response = requests.request(method, url, json=payload)
+
+    response = requests.request(method, url, json=payload, params=query_params)
     if response.status_code == 200:
         return response.json()
     else:
@@ -50,16 +51,7 @@ def fetch_tokens(sentence: str):
     Returns:
         list: List of tokens.
     """
-    return api_request("GET", f"tokens/{sentence}")["tokens"]
-
-
-def fetch_triplets():
-    """Fetch triplets from the API.
-
-    Returns:
-        dict: Dict of triplets.
-    """
-    return api_request("GET", "triplets")["triplets"]
+    return api_request("GET", f"tokens/", query_params={"text": sentence})["tokens"]
 
 
 def fetch_rules():

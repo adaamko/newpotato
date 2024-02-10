@@ -1,10 +1,10 @@
 import logging
-from dataclasses import astuple
 from typing import Any, Dict, List, Tuple
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from newpotato.datatypes import Triplet
 from newpotato.hitl import HITLManager
 
 # Initialize FastAPI, HITLManager
@@ -50,7 +50,7 @@ def parse_text(text_to_parse: TextToParse):
 
     logging.info("Initiating text parsing.")
     try:
-        hitl_manager.add_text_to_graphs(text_to_parse.text)
+        hitl_manager.get_graphs(text_to_parse.text)
         logging.info("Text parsing and storage successful.")
         return {"status": "ok"}
     except Exception as e:
@@ -69,7 +69,14 @@ def annotate_text(annotation: Annotation) -> Dict[str, Any]:
 
     logging.info("Initiating annotation storage.")
     try:
-        hitl_manager.store_triplet(annotation.text, annotation.pred, annotation.args)
+        graph = hitl_manager.get_graphs(annotation.text)[0]
+        triplet = Triplet(annotation.pred, annotation.args, graph)
+        if not triplet.mapped:
+            logging.warning("Triplet not mapped.")
+            raise HTTPException(status_code=400, detail="Triplet not mapped")
+
+        hitl_manager.store_triplet(annotation.text, triplet, True)
+
         logging.info("Annotation storage successful.")
         return {"status": "ok"}
     except Exception as e:
@@ -78,7 +85,7 @@ def annotate_text(annotation: Annotation) -> Dict[str, Any]:
 
 
 # Token Retrieval Endpoints
-@app.get("/tokens/{text}")
+@app.get("/tokens/")
 def get_tokens(text: str) -> Dict[str, Any]:
     """Retrieves tokens for parsed text.
 
@@ -98,29 +105,6 @@ def get_tokens(text: str) -> Dict[str, Any]:
     ]
     logging.info("Token retrieval successful.")
     return {"tokens": indexed_tokens}
-
-
-# Triplet Retrieval Endpoints
-@app.get("/triplets")
-def get_triplets() -> Dict[str, Any]:
-    """Retrieves stored triplets.
-
-    Returns:
-        Dict[str, Any]: Dictionary containing triplets.
-    """
-    logging.info("Initiating triplet retrieval.")
-    try:
-        sen_to_triplets = hitl_manager.get_triplets()
-        sen_to_triplets = {
-            sen: [astuple(triplet) for triplet in triplets]
-            for sen, triplets in sen_to_triplets.items()
-        }
-
-        logging.info("Triplet retrieval successful.")
-        return {"triplets": sen_to_triplets}
-    except Exception as e:
-        logging.error(f"Error retrieving triplets: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Sentence Retrieval Endpoints
