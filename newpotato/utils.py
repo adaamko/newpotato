@@ -1,7 +1,7 @@
 import itertools
 import logging
 from collections import defaultdict
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from graphbrain.hyperedge import Hyperedge
 
@@ -45,15 +45,15 @@ def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
                 to_disambiguate.append([graph["atom2word"][cand][1] for cand in cands])
 
     if len(to_disambiguate) > 0:
-        logging.debug(f'edge2toks disambiguation needed: {toks=}, {to_disambiguate=}')
+        logging.debug(f"edge2toks disambiguation needed: {toks=}, {to_disambiguate=}")
         hyp_sets = []
         for cand in itertools.product(*to_disambiguate):
             hyp_toks = sorted(toks | set(cand))
             hyp_length = hyp_toks[-1] - hyp_toks[0]
             hyp_sets.append((hyp_length, hyp_toks))
-        
+
         shortest_hyp = sorted(hyp_sets)[0][1]
-        logging.debug(f'{shortest_hyp=}')
+        logging.debug(f"{shortest_hyp=}")
         return set(shortest_hyp)
 
     return tuple(sorted(toks))

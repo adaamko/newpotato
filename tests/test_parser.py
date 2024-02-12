@@ -8,7 +8,7 @@ def test_parser():
     parser = TextParser()
     graph = parser.parse(input_text)[0]
     # assert parse_text(input_text) == {"status": "ok"}
-    assert graph['text'] == input_text
+    assert graph["text"] == input_text
 
 
 if __name__ == "__main__":

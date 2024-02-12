@@ -65,11 +65,19 @@ def parse(text_to_parse: TextToParse) -> Dict[str, Any]:
         Dict[str, Any]: Dictionary containing parsing results
     """
 
-    logging.info("parsing text")
+    logging.info(f"Parsing text: {text_to_parse.text}")
     try:
         graphs = parser.parse(text_to_parse.text)
         logging.info("parsing successful")
-        json_graphs = [graph.to_json() for graph in graphs]
+        json_graphs = []
+
+        for graph in graphs:
+            if graph["failed"] is False:
+                json_graphs.append(graph.to_json())
+            else:
+                logging.error(f"Failed to parse: {text_to_parse.text}")
+                logging.error(f"{graph}")
+
         return {"status": "ok", "graphs": json_graphs}
 
     except Exception as e:

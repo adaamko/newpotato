@@ -1,5 +1,5 @@
-from newpotato.parser import TextParserClient
 from newpotato.datatypes import GraphParse, Triplet
+from newpotato.parser import TextParserClient
 
 
 def test_graph():

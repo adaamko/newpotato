@@ -2,10 +2,9 @@ import json
 import logging
 import random
 import re
-
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Generator
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 from graphbrain.hyperedge import Hyperedge
 from graphbrain.learner.classifier import Classifier
@@ -223,14 +222,25 @@ class HITLManager:
             text: GraphParse.from_json(graph_dict, spacy_vocab)
             for text, graph_dict in data["parsed_graphs"].items()
         }
-        triplets = {
+        text_to_triplets = {
             text: [(Triplet.from_json(triplet[0]), triplet[1]) for triplet in triplets]
             for text, triplets in data["triplets"].items()
         }
 
+        # map triplets to subgraphs
+        for text, triplets in text_to_triplets.items():
+            for triplet, _ in triplets:
+                # logging.warning(
+                #         f"trying to map unmapped triplet {triplet} to {parsed_graphs[text]}"
+                #     )
+                success = triplet.map_to_subgraphs(parsed_graphs[text])
+                if not success:
+                    logging.warning("failed to map triplet, skipping")
+                    continue
+
         hitl = HITLManager(
             parsed_graphs=parsed_graphs,
-            triplets=triplets,
+            triplets=text_to_triplets,
             extractor_data=data["extractor_data"],
             parser_client=parser_client,
         )
@@ -338,24 +348,7 @@ class HITLManager:
         Returns:
             List[str]: the human-readable form of the triplet
         """
-        return [self.triplet_to_str(triplet, sen) for triplet in triplets]
-
-    def triplet_to_str(self, triplet: Triplet, sen: str) -> str:
-        """
-        Returns a human-readable version of a triplet by retrieving the words and phrases from the sentence
-
-        Args:
-            triplet (Triplet): the triplet to display
-            sen (str): the sentence that is the source of this triplet
-
-        Returns:
-            str: the human-readable form of the triplet
-        """
-        pred, args = triplet.pred, triplet.args
-        toks = self.get_tokens(sen)
-        pred_phrase = "_".join(toks[a].text for a in pred)
-        args_str = ", ".join("_".join(toks[a].text for a in phrase) for phrase in args)
-        return f"{pred_phrase}({args_str})"
+        return [str(triplet) for triplet in triplets]
 
     def get_annotated_graphs(self) -> List[str]:
         """

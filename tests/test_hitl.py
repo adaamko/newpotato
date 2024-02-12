@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 
+from newpotato.datatypes import Triplet
 from newpotato.hitl import HITLManager
 
 
@@ -22,7 +23,8 @@ class Test(unittest.TestCase):
     def test_save_load(self):
         sen = "John loves Mary"
         self.hitl.get_graphs(sen)[0]
-        self.hitl.store_triplet(sen, (1,), ((0,), (2,)))
+        triplet = Triplet((1,), ((0,), (2,)))
+        self.hitl.store_triplet(sen, triplet)
         self.hitl.get_annotated_graphs()
         rules = self.hitl.get_rules()
 
