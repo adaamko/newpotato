@@ -87,6 +87,8 @@ def _toks2subedge(
         set: tokens covered by the matching hyperedge
         set: additional tokens in the matching hyperedge
     """
+    words_to_cover = [all_toks[i] for i in toks_to_cover]
+    logging.debug(f"_toks2subedge got: {edge=}, {words_to_cover=}")
     if edge.is_atom():
         lowered_word = edge.label().lower()
         if lowered_word not in words_to_i:
@@ -102,30 +104,24 @@ def _toks2subedge(
             return edge, set(), toks
 
     relevant_toks, irrelevant_toks = set(), set()
-    relevant_subedges = []
     for subedge in edge:
         s_edge, subedge_relevant_toks, subedge_irrelevant_toks = _toks2subedge(
             subedge, toks_to_cover, all_toks, words_to_i
         )
         if subedge_relevant_toks == toks_to_cover:
             # a subedge covering everything, search can stop
-            return s_edge, subedge_relevant_toks, set()
+            logging.debug(
+                f"_toks2subedge: subedge covers everything, returning {s_edge=}, {subedge_relevant_toks=}, {subedge_irrelevant_toks=}"
+            )
+            return s_edge, subedge_relevant_toks, subedge_irrelevant_toks
 
-        if len(subedge_relevant_toks) > 0:
-            relevant_toks |= subedge_relevant_toks
-            relevant_subedges.append(s_edge)
-            irrelevant_toks_of_last_relevant_edge = subedge_irrelevant_toks
+        relevant_toks |= subedge_relevant_toks
         irrelevant_toks |= subedge_irrelevant_toks
 
-    if len(relevant_subedges) == 1:
-        # only one relevant subedge
-        return (
-            relevant_subedges[0],
-            relevant_toks,
-            irrelevant_toks_of_last_relevant_edge,
-        )
-
     # more than one relevant subedge OR no words covered
+    logging.debug(
+        f"_toks2subedge: returning {edge=}, {relevant_toks=}, {irrelevant_toks=}"
+    )
     return edge, relevant_toks, irrelevant_toks
 
 
