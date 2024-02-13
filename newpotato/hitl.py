@@ -164,37 +164,35 @@ class HITLManager:
         parser_params (Dict): parameters to be used to initialize a TextParser object
     """
 
-    def __init__(
-        self,
-        parsed_graphs: Dict[str, Dict[str, Any]] = None,
-        triplets: Dict[str, List[Tuple]] = None,
-        latest: Optional[str] = None,
-        extractor_data: Optional[Extractor] = None,
-        parser_url: Optional[str] = "http://localhost:7277",
-        parser_params: Optional[Dict[str, Any]] = None,
-        parser_client: Optional[TextParserClient] = None,
-    ):
-
-        if parser_client is not None:
-            self.text_parser = parser_client
-        else:
-            self.text_parser = TextParserClient(parser_url)
-
-        if parser_params:
-            self.text_parser.check_params(parser_params)
-
-        self.parsed_graphs = {} if parsed_graphs is None else parsed_graphs
-        self.text_to_triplets = (
-            defaultdict(list) if triplets is None else defaultdict(list, triplets)
-        )
-        self.latest = latest
-
-        if extractor_data is None:
-            self.extractor = Extractor()
-        else:
-            self.extractor = Extractor.from_json(extractor_data)
-
+    def __init__(self, parser_url: Optional[str] = "http://localhost:7277"):
+        self.text_parser = TextParserClient(parser_url)
+        self.spacy_vocab = self.text_parser.get_vocab()
+        self.latest = None
         logging.info("HITL manager initialized")
+
+    def check_parser(self, parser_params):
+        self.text_parser.check_params(parser_params)
+
+    def load_extractor(self, extractor_data):
+        self.extractor = Extractor.from_json(extractor_data)
+
+    def load_data(self, graph_data, triplet_data):
+        self.parsed_graphs = {
+            text: GraphParse.from_json(graph_dict, self.spacy_vocab)
+            for text, graph_dict in graph_data.items()
+        }
+        text_to_triplets = {
+            text: [(Triplet.from_json(triplet[0]), triplet[1]) for triplet in triplets]
+            for text, triplets in triplet_data.items()
+        }
+        self.text_to_triplets = defaultdict(list, text_to_triplets)
+
+        # map triplets to subgraphs
+        for text, triplets in self.text_to_triplets.items():
+            for triplet, _ in triplets:
+                success = triplet.map_to_subgraphs(self.parsed_graphs[text])
+                if not success:
+                    logging.warning(f"failed to map {triplet=} for {text=}, skipping")
 
     @staticmethod
     def load(fn):
@@ -214,36 +212,10 @@ class HITLManager:
         Returns:
             HITLManager: a new HITLManager object with the restored state
         """
-        parser_client = TextParserClient(parser_url)
-        parser_client.check_params(data["parser_params"])
-
-        spacy_vocab = parser_client.get_vocab()
-        parsed_graphs = {
-            text: GraphParse.from_json(graph_dict, spacy_vocab)
-            for text, graph_dict in data["parsed_graphs"].items()
-        }
-        text_to_triplets = {
-            text: [(Triplet.from_json(triplet[0]), triplet[1]) for triplet in triplets]
-            for text, triplets in data["triplets"].items()
-        }
-
-        # map triplets to subgraphs
-        for text, triplets in text_to_triplets.items():
-            for triplet, _ in triplets:
-                # logging.warning(
-                #         f"trying to map unmapped triplet {triplet} to {parsed_graphs[text]}"
-                #     )
-                success = triplet.map_to_subgraphs(parsed_graphs[text])
-                if not success:
-                    logging.warning("failed to map triplet, skipping")
-                    continue
-
-        hitl = HITLManager(
-            parsed_graphs=parsed_graphs,
-            triplets=text_to_triplets,
-            extractor_data=data["extractor_data"],
-            parser_client=parser_client,
-        )
+        hitl = HITLManager(parser_url)
+        hitl.check_parser(data["parser_params"])
+        hitl.load_data(data["parsed_graphs"], data["triplets"])
+        hitl.load_extractor(data["extractor_data"])
         return hitl
 
     def to_json(self) -> Dict[str, Any]:

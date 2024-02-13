@@ -39,6 +39,65 @@ class Annotation(BaseModel):
     args: List[Tuple[int, ...]] = Field(..., min_items=2)
 
 
+class ExtractorData(BaseModel):
+    """Model for data to load extractor.
+
+    Args:
+        extractor_data (dict): data for loading extractor
+    """
+
+    extractor_data: dict
+
+
+class Data(BaseModel):
+    """Model for graphs and triplets to be loaded.
+
+    Args:
+        graphs (dict): parsed graphs
+        triplets (dict): triplet annotation
+    """
+
+    graphs: dict
+    triplets: dict
+
+
+# Data loading endpoints
+@app.post("/load_rules")
+def load_rules(extractor_data: ExtractorData):
+    """Load extractor from saved state
+
+    Args:
+        extractor_data (ExtractorData): data for loading the extractor
+    """
+
+    logging.info("Loading extractor")
+    try:
+        hitl_manager.load_extractor(extractor_data.extractor_data)
+        logging.info("Extractor loaded successfully")
+        return {"status": "ok"}
+    except Exception as e:
+        logging.error(f"Error loading rules: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/load_data")
+def load_data(data: Data):
+    """Load graphs and triplets from saved state
+
+    Args:
+        data (Data): data for loading graphs and triplets
+    """
+
+    logging.info("Loading graphs and triplets")
+    try:
+        hitl_manager.load_data(data.graphs, data.triplets)
+        logging.info("Data loaded successfully")
+        return {"status": "ok"}
+    except Exception as e:
+        logging.error(f"Error loading data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Parsing Endpoints
 @app.post("/parse")
 def parse_text(text_to_parse: TextToParse):

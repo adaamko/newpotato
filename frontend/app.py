@@ -100,6 +100,20 @@ def upload_text_file():
         return None
 
 
+def upload_json_file():
+    """Upload a JSON file with HITL state data.
+
+    Returns:
+        dict: the data in the file.
+    """
+    file = st.file_uploader("Upload a JSON file")
+    if file is not None:
+        data = json.load(file)
+        return data
+    else:
+        return None
+
+
 def annotate_sentence(selected_sentence: str):
     """Annotate the selected sentence and submit it to the API."""
     tokens = fetch_tokens(selected_sentence)
@@ -309,8 +323,8 @@ def main():
     if "knowledge_graph" not in st.session_state:
         st.session_state["knowledge_graph"] = None
 
-    add_sentence, annotate, view_rules, inference = st.tabs(
-        ["Add Sentence", "Annotate", "View Rules", "Inference"]
+    add_sentence, annotate, view_rules, inference, load = st.tabs(
+        ["Add Sentence", "Annotate", "View Rules", "Inference", "Load"]
     )
 
     with add_sentence:
@@ -428,6 +442,33 @@ def main():
             # The edges will be selectable, and when selected, the sentences and rules that triggered the edge will be displayed
 
             visualize_kg(st.session_state["knowledge_graph"])
+
+    with load:
+        data = upload_json_file()
+        if data:
+            if "parsed_graphs" in data and "triplets" in data:
+                load_data = st.checkbox("Load data")
+            if "extractor_data" in data:
+                load_rules = st.checkbox("Load rules")
+
+            if st.button("Load (and overwrite!)"):
+                if load_data:
+                    payload = {
+                        "graphs": data["parsed_graphs"],
+                        "triplets": data["triplets"],
+                    }
+                    response = api_request("POST", "load_data", payload)
+                    if response["status"] == "ok":
+                        st.success("Data loaded successfully.")
+                    else:
+                        st.error("Failed to load data")
+                if load_rules:
+                    payload = {"extractor_data": data["extractor_data"]}
+                    response = api_request("POST", "load_rules", payload)
+                    if response["status"] == "ok":
+                        st.success("Rules loaded successfully.")
+                    else:
+                        st.error("Failed to load rules")
 
 
 if __name__ == "__main__":
