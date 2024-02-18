@@ -168,6 +168,9 @@ class HITLManager:
         self.text_parser = TextParserClient(parser_url)
         self.spacy_vocab = self.text_parser.get_vocab()
         self.latest = None
+        self.parsed_graphs = {}
+        self.text_to_triplets = defaultdict(list)
+        self.extractor = Extractor()
         logging.info("HITL manager initialized")
 
     def check_parser(self, parser_params):
@@ -387,6 +390,24 @@ class HITLManager:
             self.parsed_graphs["latest"] = graph
 
         return graphs
+
+    def delete_triplet(self, text: str, triplet: Triplet):
+        """
+        Delete the triplet.
+
+        Args:
+            text (str): the text to delete the triplet for.
+            triplet (Triplet): the triplet to delete
+        """
+
+        if text == "latest":
+            assert (
+                self.latest is not None
+            ), "no parsed graphs stored, can't use `latest`"
+            return self.delete_triplet(self.latest, triplet)
+        assert self.is_parsed(text), f"unparsed text: {text}"
+        logging.info(f"deleting from triplets: {text=}, {triplet=}")
+        self.text_to_triplets[text].remove((triplet, True))
 
     def store_triplet(
         self,

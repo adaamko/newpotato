@@ -1,6 +1,7 @@
 import json
 from collections import defaultdict
 
+import pandas as pd
 import requests
 import streamlit as st
 from graphbrain import hedge
@@ -384,8 +385,45 @@ def main():
 
             if current_annotations:
                 st.write("Current Annotations:")
-                for _, _, annotation_str in current_annotations:
-                    st.write(f"{annotation_str}")
+                df = pd.DataFrame(
+                    {
+                        "pred": "_".join([str(i) for i in annotation[0]]),
+                        "args": ",".join(
+                            "_".join([str(i) for i in arg]) for arg in annotation[1]
+                        ),
+                        "triplet": annotation[2],
+                        "delete": False,
+                    }
+                    for annotation in current_annotations
+                )
+                edited_df = st.data_editor(df, hide_index=True, key="data_editor")
+
+                if st.button("Delete Selected"):
+                    selected_triplets = edited_df[edited_df["delete"] == True]
+
+                    if not selected_triplets.empty:
+                        # iterate on rows, leave out the column names
+                        for triplet in selected_triplets.values:
+                            pred = triplet[0].split("_")
+                            pred = [int(i) for i in pred]
+                            pred = tuple(pred)
+
+                            args = [
+                                tuple(int(i) for i in arg.split("_"))
+                                for arg in triplet[1].split(",")
+                            ]
+                            payload = {
+                                "text": selected_sentence,
+                                "pred": pred,
+                                "args": args,
+                            }
+                            response = api_request("DELETE", "triplets", payload)
+
+                            if response["status"] == "ok":
+                                st.success("Annotation deleted successfully.")
+                            else:
+                                st.error("Could not delete the annotation")
+                    st.rerun()
 
     with view_rules:
         # Annotated Graphs
