@@ -15,6 +15,7 @@ from utils import (
     fetch_sentences,
     fetch_tokens,
     fetch_triplets,
+    init_session_states,
 )
 
 
@@ -248,12 +249,7 @@ def main():
     st.set_page_config(page_title="NewPotato Streamlit App", layout="wide")
     st.title("NewPotato Demo")
 
-    # Initialize or get Streamlit state
-    if "sentences" not in st.session_state:
-        st.session_state["sentences"] = []
-        st.session_state["sentences_data"] = {}
-    if "knowledge_graph" not in st.session_state:
-        st.session_state["knowledge_graph"] = None
+    init_session_states()
 
     add_sentence, annotate, view_rules, inference, load = st.tabs(
         ["Add Sentence", "Annotate", "View Rules", "Inference", "Load"]
@@ -292,6 +288,7 @@ def main():
             annotate_sentence(selected_sentence)
 
             if st.button("Submit Annotation"):
+                st.session_state.train_classifier = True
                 payload = {
                     "text": selected_sentence,
                     "pred": st.session_state["sentences_data"][selected_sentence][
@@ -330,7 +327,8 @@ def main():
                 edited_df = st.data_editor(df, hide_index=True, key="data_editor")
 
                 if st.button("Delete Selected"):
-                    selected_triplets = edited_df[edited_df["delete"] is True]
+                    st.session_state.train_classifier = True
+                    selected_triplets = edited_df[edited_df["delete"] == True]
 
                     if not selected_triplets.empty:
                         # iterate on rows, leave out the column names

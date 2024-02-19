@@ -76,3 +76,14 @@ def fetch_annotated_graphs():
         dict: Dict of annotated graphs.
     """
     return api_request("GET", "annotated_graphs")["annotated_graphs"]
+
+
+def init_session_states():
+    """Initialize session states."""
+    if "train_classifier" not in st.session_state:
+        st.session_state.train_classifier = False
+    if "sentences" not in st.session_state:
+        st.session_state["sentences"] = []
+        st.session_state["sentences_data"] = {}
+    if "knowledge_graph" not in st.session_state:
+        st.session_state["knowledge_graph"] = None
