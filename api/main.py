@@ -186,15 +186,40 @@ def get_triplets(text: str) -> Dict[str, Any]:
             logging.warning(f"No annotated triplets found for text: {text}")
             return {"triplets": []}
         triplets = [
-            (triplet.pred, triplet.args, str(triplet))
+            (triplet.pred, triplet.args, str(triplet), text)
             for triplet in sen_to_triplets[text]
         ]
 
-        print(triplets)
+        logging.debug(f"Retrieved triplets: {triplets}")
         logging.info("Annotated triplets retrieval successful.")
         return {"triplets": triplets}
     except Exception as e:
         logging.error(f"Error retrieving annotated triplets: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Delete Triplet endpoint
+@app.delete("/triplets")
+def delete_triplet(annotation: Annotation) -> Dict[str, Any]:
+    """Deletes a triplet.
+
+    Args:
+        triplet (Annotation): Triplet to be deleted.
+    """
+
+    logging.info("Initiating triplet deletion.")
+    try:
+        logging.info(
+            f"Annotation: {annotation.text}, {annotation.pred}, {annotation.args}"
+        )
+        graph = hitl_manager.get_graphs(annotation.text)[0]
+        triplet = Triplet(annotation.pred, annotation.args, graph)
+        logging.info(f"Deleting triplet: {triplet}")
+        hitl_manager.delete_triplet(annotation.text, triplet)
+        logging.info("Triplet deletion successful.")
+        return {"status": "ok"}
+    except Exception as e:
+        logging.error(f"Error deleting triplet: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

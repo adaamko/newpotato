@@ -1,89 +1,22 @@
 import json
 from collections import defaultdict
 
-import requests
+import pandas as pd
 import streamlit as st
 from graphbrain import hedge
 from graphbrain.notebook import *  # noqa
 from graphbrain.notebook import _edge2html_vblocks
 from st_cytoscape import cytoscape
 from streamlit_text_annotation import text_annotation
-
-API_URL = "http://localhost:8000"
-
-
-def api_request(
-    method: str, endpoint: str, payload: dict = None, query_params: dict = None
-):
-    """Generic API request function.
-
-    Args:
-        method (str): HTTP method.
-        endpoint (str): API endpoint.
-        payload (dict, optional): Parameters. Defaults to None.
-
-    Returns:
-        dict: Response.
-    """
-    url = f"{API_URL}/{endpoint}"
-
-    response = requests.request(method, url, json=payload, params=query_params)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        st.error(response.json())
-        raise Exception(response.json())
-
-
-def fetch_sentences():
-    """Fetch sentences from the API.
-
-    Returns:
-        list: List of sentences.
-    """
-    return api_request("GET", "sentences")["sentences"]
-
-
-def fetch_tokens(sentence: str):
-    """Fetch tokens from the API.
-
-    Args:
-        sentence (str): Sentence to fetch tokens for.
-
-    Returns:
-        list: List of tokens.
-    """
-    return api_request("GET", "tokens/", query_params={"text": sentence})["tokens"]
-
-
-def fetch_triplets(sentence: str):
-    """Fetch triplets from the API.
-
-    Args:
-        sentence (str): Sentence to fetch triplets for.
-
-    Returns:
-        list: List of triplets.
-    """
-    return api_request("GET", "triplets/", query_params={"text": sentence})["triplets"]
-
-
-def fetch_rules():
-    """Fetch rules from the API.
-
-    Returns:
-        dict: Dict of rules.
-    """
-    return api_request("GET", "rules")["rules"]
-
-
-def fetch_annotated_graphs():
-    """Fetch annotated graphs from the API.
-
-    Returns:
-        dict: Dict of annotated graphs.
-    """
-    return api_request("GET", "annotated_graphs")["annotated_graphs"]
+from utils import (
+    api_request,
+    fetch_annotated_graphs,
+    fetch_rules,
+    fetch_sentences,
+    fetch_tokens,
+    fetch_triplets,
+    init_session_states,
+)
 
 
 def upload_text_file():
@@ -316,12 +249,7 @@ def main():
     st.set_page_config(page_title="NewPotato Streamlit App", layout="wide")
     st.title("NewPotato Demo")
 
-    # Initialize or get Streamlit state
-    if "sentences" not in st.session_state:
-        st.session_state["sentences"] = []
-        st.session_state["sentences_data"] = {}
-    if "knowledge_graph" not in st.session_state:
-        st.session_state["knowledge_graph"] = None
+    init_session_states()
 
     add_sentence, annotate, view_rules, inference, load = st.tabs(
         ["Add Sentence", "Annotate", "View Rules", "Inference", "Load"]
@@ -360,6 +288,7 @@ def main():
             annotate_sentence(selected_sentence)
 
             if st.button("Submit Annotation"):
+                st.session_state.train_classifier = True
                 payload = {
                     "text": selected_sentence,
                     "pred": st.session_state["sentences_data"][selected_sentence][
@@ -384,8 +313,46 @@ def main():
 
             if current_annotations:
                 st.write("Current Annotations:")
-                for _, _, annotation_str in current_annotations:
-                    st.write(f"{annotation_str}")
+                df = pd.DataFrame(
+                    {
+                        "pred": "_".join([str(i) for i in annotation[0]]),
+                        "args": ",".join(
+                            "_".join([str(i) for i in arg]) for arg in annotation[1]
+                        ),
+                        "triplet": annotation[2],
+                        "delete": False,
+                    }
+                    for annotation in current_annotations
+                )
+                edited_df = st.data_editor(df, hide_index=True, key="data_editor")
+
+                if st.button("Delete Selected"):
+                    st.session_state.train_classifier = True
+                    selected_triplets = edited_df[edited_df["delete"] == True]
+
+                    if not selected_triplets.empty:
+                        # iterate on rows, leave out the column names
+                        for triplet in selected_triplets.values:
+                            pred = triplet[0].split("_")
+                            pred = [int(i) for i in pred]
+                            pred = tuple(pred)
+
+                            args = [
+                                tuple(int(i) for i in arg.split("_"))
+                                for arg in triplet[1].split(",")
+                            ]
+                            payload = {
+                                "text": selected_sentence,
+                                "pred": pred,
+                                "args": args,
+                            }
+                            response = api_request("DELETE", "triplets", payload)
+
+                            if response["status"] == "ok":
+                                st.success("Annotation deleted successfully.")
+                            else:
+                                st.error("Could not delete the annotation")
+                    st.rerun()
 
     with view_rules:
         # Annotated Graphs
