@@ -9,8 +9,11 @@ from graphbrain.notebook import _edge2html_vblocks
 from st_cytoscape import cytoscape
 from streamlit_text_annotation import text_annotation
 from utils import (
+    add_annotation,
     api_request,
-    fetch_annotated_graphs,
+    delete_annotation,
+    fetch_all_triplets,
+    fetch_inference_for_sentences,
     fetch_rules,
     fetch_sentences,
     fetch_tokens,
@@ -132,7 +135,7 @@ def visualize_kg(knowledge_graph):
     elements = []
 
     unique_nodes = set()
-    for triplet, _ in knowledge_graph.items():
+    for triplet in knowledge_graph:
         unique_nodes.add(triplet[1])
         unique_nodes.add(triplet[2])
 
@@ -146,7 +149,8 @@ def visualize_kg(knowledge_graph):
         )
 
     # Add edges
-    for triplet, _ in knowledge_graph.items():
+    for triplet in knowledge_graph:
+        annotated = knowledge_graph[triplet][0][3]
         elements.append(
             {
                 "data": {
@@ -154,6 +158,7 @@ def visualize_kg(knowledge_graph):
                     "label": triplet[0],
                     "source": triplet[1],
                     "target": triplet[2],
+                    "line_color": "#FFC107" if annotated else "#008000",
                 },
                 "selectable": True,
             }
@@ -181,8 +186,8 @@ def visualize_kg(knowledge_graph):
             "selector": "edge",
             "style": {
                 "width": 4,
-                "line-color": "#FFC107",  # Amber
-                "target-arrow-color": "#FFC107",
+                "line-color": "data(line_color)",
+                "target-arrow-color": "data(line_color)",
                 "target-arrow-shape": "triangle",
                 "curve-style": "bezier",
                 "label": "data(label)",
@@ -227,21 +232,46 @@ def visualize_kg(knowledge_graph):
                     unsafe_allow_html=True,
                 )
 
-                for sentence, rules in knowledge_graph[(rel, arg0, arg1)]:
+                for sentence, applied_rules, triplets, annotated in knowledge_graph[
+                    (rel, arg0, arg1)
+                ]:
                     st.markdown(
                         f"<div class='big-font'><div class='highlight'>Sentence: {sentence} </div></div>",
                         unsafe_allow_html=True,
                     )
 
-                    for rule in rules:
+                    for applied_rule in applied_rules:
                         st.markdown(
                             "<div class='big-font'><div class='rule-style'><b>The matched pattern:</b></div></div>",
                             unsafe_allow_html=True,
                         )
 
-                        html = _edge2html_vblocks(hedge(rule))
-                        st.write(html, unsafe_allow_html=True)
+                        edge = hedge(applied_rule)
+                        edge = edge.simplify()
+                        html = _edge2html_vblocks(edge)
+                        st.markdown(html, unsafe_allow_html=True)
                         # st.write(f"Rule: {rule}")
+
+                    if annotated:
+                        st.info("This sentence has been annotated!")
+
+                    else:
+                        st.warning(
+                            "This sentence has been inferred from the rules. Do you want to annotate it?"
+                        )
+                        if st.button("Annotate"):
+                            pred = triplets[0]
+                            args = triplets[1]
+                            ann_response = add_annotation(sentence, pred, args)
+
+                            if ann_response["status"] == "ok":
+                                st.info(
+                                    "Annotation added successfully, please retrain the classifier."
+                                )
+                                st.session_state.train_classifier = True
+                                st.rerun()
+                            else:
+                                st.error("Could not add the annotation")
 
 
 def main():
@@ -251,8 +281,12 @@ def main():
 
     init_session_states()
 
-    add_sentence, annotate, view_rules, inference, load = st.tabs(
-        ["Add Sentence", "Annotate", "View Rules", "Inference", "Load"]
+    # add_sentence, annotate, view_rules, inference, load = st.tabs(
+    #     ["Add Sentence", "Annotate", "View Rules", "Inference", "Load"]
+    # )
+
+    add_sentence, annotate, inference, load = st.tabs(
+        ["Add Sentence", "Annotate", "Inference", "Load"]
     )
 
     with add_sentence:
@@ -289,16 +323,16 @@ def main():
 
             if st.button("Submit Annotation"):
                 st.session_state.train_classifier = True
-                payload = {
-                    "text": selected_sentence,
-                    "pred": st.session_state["sentences_data"][selected_sentence][
+
+                response = add_annotation(
+                    selected_sentence,
+                    st.session_state["sentences_data"][selected_sentence][
                         "annotations"
                     ][-1]["pred"],
-                    "args": st.session_state["sentences_data"][selected_sentence][
+                    st.session_state["sentences_data"][selected_sentence][
                         "annotations"
                     ][-1]["args"],
-                }
-                response = api_request("POST", "annotate", payload)
+                )
                 if response["status"] == "ok":
                     st.success("Annotation added successfully.")
                 elif response["status"] == "error":
@@ -324,7 +358,9 @@ def main():
                     }
                     for annotation in current_annotations
                 )
-                edited_df = st.data_editor(df, hide_index=True, key="data_editor")
+                edited_df = st.data_editor(
+                    df, hide_index=True, key="annotation_data_editor"
+                )
 
                 if st.button("Delete Selected"):
                     st.session_state.train_classifier = True
@@ -341,67 +377,122 @@ def main():
                                 tuple(int(i) for i in arg.split("_"))
                                 for arg in triplet[1].split(",")
                             ]
-                            payload = {
-                                "text": selected_sentence,
-                                "pred": pred,
-                                "args": args,
-                            }
-                            response = api_request("DELETE", "triplets", payload)
+                            response = delete_annotation(selected_sentence, pred, args)
 
                             if response["status"] == "ok":
                                 st.success("Annotation deleted successfully.")
+                                # Remove from "sentences_data"
+                                st.session_state["sentences_data"][selected_sentence][
+                                    "annotations"
+                                ] = [
+                                    ann
+                                    for ann in st.session_state["sentences_data"][
+                                        selected_sentence
+                                    ]["annotations"]
+                                    if ann["pred"] != pred or ann["args"] != args
+                                ]
                             else:
                                 st.error("Could not delete the annotation")
                     st.rerun()
 
-    with view_rules:
-        # Annotated Graphs
-        if st.button("Get Annotated Graphs"):
-            annotated_graphs = fetch_annotated_graphs()
-            st.write("Annotated Graphs:")
-            for graph in annotated_graphs:
-                st.write(graph)
+    # with view_rules:
+    #     # Annotated Graphs
+    #     if st.button("Get Annotated Graphs"):
+    #         annotated_graphs = fetch_annotated_graphs()
+    #         st.write("Annotated Graphs:")
+    #         for graph in annotated_graphs:
+    #             st.write(graph)
 
-        if st.button("Get Rules"):
-            rules = fetch_rules()
-            st.write("Extracted Rules:")
-            # print as strings
-            for rule in rules:
-                st.write(rule)
+    #     if st.button("Get Rules"):
+    #         rules = fetch_rules()
+    #         st.write("Extracted Rules:")
+    #         # print as strings
+    #         for rule in rules:
+    #             st.write(rule)
 
     with inference:
-        sentence_to_classify = st.text_area("Text input", height=300)
 
-        if st.button("Classify"):
-            if sentence_to_classify.strip():
-                sentence_to_classify = sentence_to_classify.replace("2:", "")
-                payload = {"text": sentence_to_classify}
-                response = api_request("POST", "classify_text", payload)
-                if response["status"] == "No matches found":
-                    st.write("No matches found.")
+        if st.session_state.train_classifier:
+            st.error("!!The classifier is out of date. Please retrain it.")
+
+            if st.button("Train Classifier"):
+                rules = fetch_rules()
+                if not rules:
+                    st.error("No rules found, please annotate some sentences first.")
+
                 else:
-                    text_to_matches = response["matches"]
-                    triplets_to_sentence_and_rule = defaultdict(list)
+                    st.session_state.train_classifier = False
+                    st.rerun()
+        else:
+            if st.session_state["sentences"]:
+                all_triplets = fetch_all_triplets()
+                triplets_by_sen = defaultdict(list)
+                for triplet in all_triplets:
+                    triplets_by_sen[triplet[-1]].append(triplet[-2])
+                sentences_df = pd.DataFrame(
+                    {
+                        "select": False,
+                        "sentence": sen,
+                        "annotations": ", ".join(triplets_by_sen[sen]),
+                    }
+                    for sen in st.session_state["sentences"]
+                )
+                sentences_edited_df = st.data_editor(
+                    sentences_df, hide_index=True, key="data_editor"
+                )
 
-                    for text, matches in text_to_matches.items():
-                        triplets = matches["matches"]
-                        rules = matches["rules_triggered"]
+                selected_sentences = sentences_edited_df[
+                    sentences_edited_df["select"] == True
+                ]
 
-                        for triplet in triplets:
-                            triplet_tuple = (
-                                triplet["REL"],
-                                triplet["ARG0"],
-                                triplet["ARG1"],
+                # Choice whether to classify all sentences or selected sentences
+                all_or_selected = st.radio(
+                    "Classify all sentences or selected sentences?", ("All", "Selected")
+                )
+                if st.button("Classify"):
+                    if all_or_selected == "All":
+                        text_to_matches = fetch_inference_for_sentences(
+                            st.session_state["sentences"]
+                        )
+                    else:
+                        if not selected_sentences.empty:
+                            sentences_to_classify = selected_sentences[
+                                "sentence"
+                            ].tolist()
+                            text_to_matches = fetch_inference_for_sentences(
+                                sentences_to_classify
                             )
-                            triplets_to_sentence_and_rule[triplet_tuple].append(
-                                (text, rules)
+
+                    if text_to_matches:
+                        # Add which texts are annotated
+                        for text in text_to_matches:
+                            text_to_matches[text]["annotated"] = ", ".join(
+                                triplets_by_sen[text]
                             )
 
-                    st.session_state["knowledge_graph"] = triplets_to_sentence_and_rule
+                        triplets_to_sentence_and_rule = defaultdict(list)
 
-            else:
-                st.write("Please enter a sentence to classify.")
+                        for text, data in text_to_matches.items():
+                            rules = data["rules_triggered"]
+                            matches = data["matches"]
+                            triplets = data["triplets"]
+                            annotated = data["annotated"]
 
+                            for i, m in enumerate(matches):
+                                triplet_tuple = (
+                                    m["REL"],
+                                    m["ARG0"],
+                                    m["ARG1"],
+                                )
+                                triplets_to_sentence_and_rule[triplet_tuple].append(
+                                    (text, rules, triplets[i], annotated)
+                                )
+                        st.session_state["knowledge_graph"] = (
+                            triplets_to_sentence_and_rule
+                        )
+
+                    else:
+                        st.write("No matches found.")
         if st.session_state["knowledge_graph"]:
             st.write("Knowledge Graph")
             # Use cytoscape to display the knowledge graph

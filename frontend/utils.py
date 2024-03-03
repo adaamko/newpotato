@@ -27,6 +27,32 @@ def api_request(
         raise Exception(response.json())
 
 
+def add_annotation(text: str, pred: tuple[int, ...], args: list[tuple[int, ...]]):
+    """Annotate sentence with triplets.
+
+    Args:
+        text (str): Sentence.
+        pred (tuple[int, ...]): Predicate.
+        args (list[tuple[int, ...]]): Arguments.
+    """
+    return api_request(
+        "POST", "annotate", payload={"text": text, "pred": pred, "args": args}
+    )
+
+
+def delete_annotation(text: str, pred: tuple[int, ...], args: list[tuple[int, ...]]):
+    """Delete annotation from sentence.
+
+    Args:
+        text (str): Sentence.
+        pred (tuple[int, ...]): Predicate.
+        args (list[tuple[int, ...]]): Arguments.
+    """
+    return api_request(
+        "DELETE", "annotate", payload={"text": text, "pred": pred, "args": args}
+    )
+
+
 def fetch_sentences():
     """Fetch sentences from the API.
 
@@ -60,13 +86,22 @@ def fetch_triplets(sentence: str):
     return api_request("GET", "triplets/", query_params={"text": sentence})["triplets"]
 
 
-def fetch_rules():
+def fetch_all_triplets():
+    """Fetch all triplets from the API.
+
+    Returns:
+        list: List of triplets.
+    """
+    return api_request("GET", "triplets/all")["triplets"]
+
+
+def fetch_rules(learn: bool = True):
     """Fetch rules from the API.
 
     Returns:
         dict: Dict of rules.
     """
-    return api_request("GET", "rules")["rules"]
+    return api_request("GET", "rules/", query_params={"learn": learn})["rules"]
 
 
 def fetch_annotated_graphs():
@@ -78,10 +113,36 @@ def fetch_annotated_graphs():
     return api_request("GET", "annotated_graphs")["annotated_graphs"]
 
 
+def fetch_inference_for_text(text: str):
+    """Fetch inference from the API.
+
+    Args:
+        text (str): Text to infer.
+
+    Returns:
+        dict: Inference.
+    """
+    return api_request("POST", "infer", payload={"text": text})["matches"]
+
+
+def fetch_inference_for_sentences(sentences: list):
+    """Fetch inference from the API.
+
+    Args:
+        sentences (list): Sentences to infer.
+
+    Returns:
+        dict: Inference.
+    """
+    return api_request("POST", "infer/sentences", payload={"sentences": sentences})[
+        "matches"
+    ]
+
+
 def init_session_states():
     """Initialize session states."""
     if "train_classifier" not in st.session_state:
-        st.session_state.train_classifier = False
+        st.session_state.train_classifier = True
     if "sentences" not in st.session_state:
         st.session_state["sentences"] = []
         st.session_state["sentences_data"] = {}
