@@ -148,3 +148,5 @@ def init_session_states():
         st.session_state["sentences_data"] = {}
     if "knowledge_graph" not in st.session_state:
         st.session_state["knowledge_graph"] = None
+    if "rules" not in st.session_state:
+        st.session_state["rules"] = None
