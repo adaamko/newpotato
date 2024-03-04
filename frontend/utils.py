@@ -49,7 +49,7 @@ def delete_annotation(text: str, pred: tuple[int, ...], args: list[tuple[int, ..
         args (list[tuple[int, ...]]): Arguments.
     """
     return api_request(
-        "DELETE", "annotate", payload={"text": text, "pred": pred, "args": args}
+        "DELETE", "triplets", payload={"text": text, "pred": pred, "args": args}
     )
 
 
