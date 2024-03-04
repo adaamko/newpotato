@@ -237,9 +237,9 @@ def visualize_kg(knowledge_graph):
                     unsafe_allow_html=True,
                 )
 
-                for sentence, applied_rules, triplets, annotated in knowledge_graph[
-                    (rel, arg0, arg1)
-                ]:
+                for i, (sentence, applied_rules, triplets, annotated) in enumerate(
+                    knowledge_graph[(rel, arg0, arg1)]
+                ):
                     st.markdown(
                         f"<div class='big-font'><div class='highlight'>Sentence: {sentence} </div></div>",
                         unsafe_allow_html=True,
@@ -274,7 +274,7 @@ def visualize_kg(knowledge_graph):
                                 [sen[-2] for sen in annotated_sentence]
                             )
 
-                            knowledge_graph[(rel, arg0, arg1)] = (
+                            knowledge_graph[(rel, arg0, arg1)][i] = (
                                 sentence,
                                 applied_rules,
                                 triplets,
