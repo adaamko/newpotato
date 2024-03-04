@@ -550,18 +550,24 @@ class HITLManager:
         """
 
         graphs = self.get_graphs(text)
-        matches_by_text = {graph["text"]: {} for graph in graphs}
+        matches_by_text = {
+            graph["text"]: {"matches": [], "rules_triggered": [], "triplets": []}
+            for graph in graphs
+        }
 
         for graph in graphs:
             matches, rules_triggered = self.extractor.classify(graph["main_edge"])
+            logging.info(f"matches: {matches}")
+            triplets = matches2triplets(matches, graph)
+            logging.info(f"triplets: {triplets}")
+
             if convert_to_text:
                 matches = [
                     {k: v.label() for k, v in match.items()} for match in matches
                 ]
 
-            logging.info(f"matches: {matches}")
-
             matches_by_text[graph["text"]]["matches"] = matches
             matches_by_text[graph["text"]]["rules_triggered"] = rules_triggered
+            matches_by_text[graph["text"]]["triplets"] = triplets
 
         return matches_by_text

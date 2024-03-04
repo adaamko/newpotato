@@ -25,6 +25,16 @@ class TextToParse(BaseModel):
     text: str
 
 
+class SentencesToInfer(BaseModel):
+    """Model for sentences to be inferred.
+
+    Args:
+        sentences (List[str]): Sentences to be inferred.
+    """
+
+    sentences: List[str]
+
+
 class Annotation(BaseModel):
     """Model for text annotations.
 
@@ -198,6 +208,29 @@ def get_triplets(text: str) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/triplets/all")
+def get_all_triplets() -> Dict[str, Any]:
+    """Retrieves all annotated triplets.
+
+    Returns:
+        Dict[str, Any]: Dictionary containing annotated triplets.
+    """
+    logging.info("Initiating all annotated triplets retrieval.")
+    try:
+        sen_to_triplets = hitl_manager.get_true_triplets()
+        triplets = []
+        for text in sen_to_triplets:
+            for triplet in sen_to_triplets[text]:
+                triplets.append((triplet.pred, triplet.args, str(triplet), text))
+
+        logging.debug(f"Retrieved triplets: {triplets}")
+        logging.info("All annotated triplets retrieval successful.")
+        return {"triplets": triplets}
+    except Exception as e:
+        logging.error(f"Error retrieving all annotated triplets: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Delete Triplet endpoint
 @app.delete("/triplets")
 def delete_triplet(annotation: Annotation) -> Dict[str, Any]:
@@ -244,7 +277,7 @@ def get_sentences() -> Dict[str, List[str]]:
 
 # Rule Endpoints
 @app.get("/rules")
-def get_rules() -> Dict[str, Any]:
+def get_rules(learn: bool = False) -> Dict[str, Any]:
     """Extracts and retrieves rules based on stored triplets.
 
     Returns:
@@ -252,7 +285,7 @@ def get_rules() -> Dict[str, Any]:
     """
     logging.info("Initiating rule extraction and retrieval.")
     try:
-        rules = hitl_manager.get_rules()
+        rules = hitl_manager.get_rules(learn=learn)
         logging.info("Rule extraction and retrieval successful.")
         return {"rules": rules}
     except Exception as e:
@@ -278,8 +311,8 @@ def get_annotated_graphs() -> Dict[str, Any]:
 
 
 # Text Classification Endpoints
-@app.post("/classify_text")
-def classify_text(text_to_classify: TextToParse) -> Dict[str, Any]:
+@app.post("/infer")
+def infer(text_to_classify: TextToParse) -> Dict[str, Any]:
     """Classifies the text based on stored rules.
 
     Args:
@@ -295,6 +328,13 @@ def classify_text(text_to_classify: TextToParse) -> Dict[str, Any]:
             text_to_classify.text, convert_to_text=True
         )
         logging.info("Text classification successful.")
+
+        # Convert Triplets to Tuple for JSON serialization
+        matches_by_text["triplets"] = [
+            (triplet.pred, triplet.args, str(triplet), text_to_classify.text)
+            for triplet in matches_by_text["triplets"]
+        ]
+
         if not matches_by_text:
             return {"status": "No matches found"}
         else:
@@ -302,4 +342,47 @@ def classify_text(text_to_classify: TextToParse) -> Dict[str, Any]:
 
     except Exception as e:
         logging.error(f"Error in text classification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/infer/sentences")
+def infer_sentences(sentences: SentencesToInfer) -> Dict[str, Any]:
+    """Classifies the sentences based on stored rules.
+
+    Args:
+        sentences (SentencesToInfer): Sentences to be classified.
+
+    Returns:
+        Dict[str, Any]: Dictionary containing classification results.
+    """
+
+    logging.info("Initiating sentence classification.")
+    try:
+        matches_by_text = {}
+        for sentence in sentences.sentences:
+            matches = hitl_manager.extract_triplets_from_text(
+                sentence, convert_to_text=True
+            )
+            # Add matches to matches_by_text
+            for match, match_data in matches.items():
+                matches_by_text[match] = match_data
+
+        if all(
+            len(matches_by_text[sentence]["triplets"]) == 0
+            for sentence in matches_by_text
+        ):
+            return {"status": "No matches found", "matches": {}}
+
+        # Convert Triplets to Tuple for JSON serialization
+        for sentence in matches_by_text:
+            matches_by_text[sentence]["triplets"] = [
+                (triplet.pred, triplet.args, str(triplet), sentence)
+                for triplet in matches_by_text[sentence]["triplets"]
+            ]
+        logging.info(f"Matches by text: {matches_by_text}")
+        logging.info("Sentence classification successful.")
+        return {"status": "ok", "matches": matches_by_text}
+
+    except Exception as e:
+        logging.error(f"Error in sentence classification: {e}")
         raise HTTPException(status_code=500, detail=str(e))
