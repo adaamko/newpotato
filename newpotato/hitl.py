@@ -278,7 +278,7 @@ class HITLManager:
         """
         return self.text_parser.parse(text)
 
-    def get_rules(self, learn: bool = False) -> List[Rule]:
+    def get_rules(self, learn: bool = True) -> List[Rule]:
         """
         Get the rules.
 
