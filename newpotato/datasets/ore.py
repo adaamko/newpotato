@@ -6,9 +6,8 @@ from typing import Any, Dict
 from rich.console import Console
 from tqdm import tqdm
 
-from newpotato.datatypes import Triplet
 from newpotato.hitl import AnnotatedWordsNotFoundError, HITLManager
-from newpotato.utils import get_single_triplet_from_user, print_tokens
+from newpotato.utils import get_triplet_from_annotation
 
 console = Console()
 
@@ -37,27 +36,14 @@ def get_triplets_from_annotation(data: Dict[str, Any], hitl: HITLManager):
             args = [
                 hitl.get_toks_from_txt(arg_txt, sen) for arg_txt in text_triplet["args"]
             ]
-            triplet = Triplet(pred, args, sen_graph)
         except AnnotatedWordsNotFoundError:
-            triplet = None
-
-        if triplet is None or not triplet.mapped:
-            if triplet is None:
-                console.print(
-                    f"[bold red]Could not find all words of annotation: pred={text_triplet['rel']}, args={text_triplet['args']}[/bold red]"
-                )
-            else:
-                console.print(
-                    f"[bold red]Could not map annotation {str(triplet)} to subedges)[/bold red]"
-                )
-
             console.print(
-                "[bold red]Please provide alternative (or press ENTER to skip)[/bold red]"
+                f"[bold red]Could not find all words of annotation: pred={text_triplet['rel']}, args={text_triplet['args']}[/bold red]"
             )
-            print_tokens(sen, hitl, console)
-            triplet = get_single_triplet_from_user(sen, hitl, console)
-            if triplet is None:
-                continue
+            pred = None
+            args = None
+
+        triplet = get_triplet_from_annotation(pred, args, sen, sen_graph, hitl, console)
 
         hitl.store_triplet(sen, triplet, True)
 
@@ -80,15 +66,15 @@ def main():
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    console.print('initializing HITL session')
+    console.print("initializing HITL session")
     hitl = HITLManager()
-    console.print(f'loading ORE data from {args.input_file}')
+    console.print(f"loading ORE data from {args.input_file}")
     with open(args.input_file) as f:
         for i, line in tqdm(enumerate(f)):
             data = json.loads(line)
             get_triplets_from_annotation(data, hitl)
-    
-    console.print(f'saving HITL session to {args.state_file}')
+
+    console.print(f"saving HITL session to {args.state_file}")
     hitl.save(args.state_file)
 
 

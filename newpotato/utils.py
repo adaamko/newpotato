@@ -58,6 +58,23 @@ def get_single_triplet_from_user(sentence, hitl, console, expect_mappable=True):
         return mapped_triplet
 
 
+def get_triplet_from_annotation(pred, args, sen, sen_graph, hitl, console):
+    triplet = None if args is None else Triplet(pred, args, sen_graph)
+    if triplet is None or not triplet.mapped:
+        console.print(
+            f"[bold red]Could not map annotation {str(triplet)} to subedges)[/bold red]"
+        )
+
+        console.print(
+            "[bold red]Please provide alternative (or press ENTER to skip)[/bold red]"
+        )
+        print_tokens(sen, hitl, console)
+        triplet = get_single_triplet_from_user(sen, hitl, console)
+        if triplet is None:
+            console.print("[bold red]No triplet returned[/bold red]")
+        return triplet
+                
+
 def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
     """
     find IDs of tokens covered by an edge of a graph
