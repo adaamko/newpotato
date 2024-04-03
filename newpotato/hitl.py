@@ -434,7 +434,9 @@ class HITLManager:
         logging.info(f"appending to triplets: {text=}, {triplet=}")
         self.text_to_triplets[text].append((triplet, positive))
 
-    def get_toks_from_txt(self, words_txt: str, sen: str) -> Tuple[int, ...]:
+    def get_toks_from_txt(
+        self, words_txt: str, sen: str, ignore_brackets: bool = False
+    ) -> Tuple[int, ...]:
         """
         Map a substring of a sentence to its tokens. Used to parse annotations of triplets
         provided as plain text strings of the predicate and the arguments
@@ -442,12 +444,16 @@ class HITLManager:
         Args:
             words_txt (str): the substring of the sentence
             sen (str): the sentence
+            ignore_brackets (bool): whether to remove brackets from the text before matching (required for ORE annotation)
 
         Returns:
             Tuple[int, ...] the tokens of the sentence corresponding to the substring
         """
         logging.debug(f"{words_txt=}, {sen=}")
-        pattern = re.escape(re.sub('["()]', "", words_txt))
+        if ignore_brackets:
+            pattern = re.escape(re.sub('["()]', "", words_txt))
+        else:
+            pattern = re.escape(words_txt)
         logging.debug(f"{pattern=}")
         if pattern[0].isalpha():
             pattern = r"\b" + pattern

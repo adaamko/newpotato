@@ -32,9 +32,12 @@ def get_triplets_from_annotation(data: Dict[str, Any], hitl: HITLManager):
     sen = sen_graph["text"]
     for text_triplet in data["triplets"]:
         try:
-            pred = hitl.get_toks_from_txt(text_triplet["rel"], sen)
+            pred = hitl.get_toks_from_txt(
+                text_triplet["rel"], sen, ignore_brackets=True
+            )
             args = [
-                hitl.get_toks_from_txt(arg_txt, sen) for arg_txt in text_triplet["args"]
+                hitl.get_toks_from_txt(arg_txt, sen, ignore_brackets=True)
+                for arg_txt in text_triplet["args"]
             ]
         except AnnotatedWordsNotFoundError:
             console.print(

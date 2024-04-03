@@ -52,6 +52,7 @@ def load_food_disease_dataset(input_file, hitl):
                 )
                 args = None
 
+            logging.debug(f'FoodDisease args from text: {args=}')
             triplet = get_triplet_from_annotation(
                 pred, args, sen, sen_graph, hitl, console
             )
@@ -70,8 +71,8 @@ def get_args():
 def main():
     args = get_args()
     logging.basicConfig(
-        format="%(asctime)s : "
-        + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s"
+        format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
+        force=True
     )
     logging.getLogger().setLevel(logging.INFO)
     if args.debug:
