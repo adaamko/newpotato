@@ -280,8 +280,8 @@ def get_args():
 def main():
     args = get_args()
     logging.basicConfig(
-        format="%(asctime)s : "
-        + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s"
+        format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
+        force=True
     )
     logging.getLogger().setLevel(logging.INFO)
     if args.debug:

@@ -58,12 +58,16 @@ def get_single_triplet_from_user(sentence, hitl, console, expect_mappable=True):
         return mapped_triplet
 
 
-def get_triplet_from_annotation(pred, args, sen, sen_graph, hitl, console):
-    triplet = None if args is None else Triplet(pred, args, sen_graph)
-    if triplet is None or not triplet.mapped:
+def get_triplet_from_annotation(pred, args, sen, sen_graph, hitl, console, ask_user=True):
+    triplet = Triplet(pred, args, sen_graph)
+    if not triplet.mapped:
         console.print(
             f"[bold red]Could not map annotation {str(triplet)} to subedges)[/bold red]"
         )
+        if not ask_user:
+            console.print(
+                "[bold red]Returning unmapped triplet[/bold red]")
+            return triplet
 
         console.print(
             "[bold red]Please provide alternative (or press ENTER to skip)[/bold red]"
@@ -72,7 +76,7 @@ def get_triplet_from_annotation(pred, args, sen, sen_graph, hitl, console):
         triplet = get_single_triplet_from_user(sen, hitl, console)
         if triplet is None:
             console.print("[bold red]No triplet returned[/bold red]")
-        return triplet
+    return triplet
                 
 
 def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):

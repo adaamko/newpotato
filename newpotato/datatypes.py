@@ -101,6 +101,8 @@ def _toks2subedge(
         if len(relevant_toks) > 0:
             return edge, relevant_toks, set()
         else:
+            if lowered_word in NON_ATOM_WORDS:
+                return edge, set(), set()
             return edge, set(), toks
 
     relevant_toks, irrelevant_toks = set(), set()
@@ -178,7 +180,7 @@ class Triplet:
 
     def __init__(self, pred, args, sen_graph=None, strict=True):
         logging.debug(f"triple init got: pred: {pred}, args: {args}")
-        self.pred = tuple(int(i) for i in pred)
+        self.pred = None if pred is None else tuple(int(i) for i in pred)
         self.args = tuple(tuple(int(i) for i in arg) for arg in args)
         self.mapped = False
         self.variables = None
@@ -200,7 +202,7 @@ class Triplet:
 
     def to_str(self, graph):
         toks = [tok for tok in graph["spacy_sentence"]]
-        pred_phrase = "_".join(toks[a].text for a in self.pred)
+        pred_phrase = "" if self.pred is None else "_".join(toks[a].text for a in self.pred)
         args_str = ", ".join(
             "_".join(toks[a].text for a in phrase) for phrase in self.args
         )
@@ -212,6 +214,9 @@ class Triplet:
         else:
             return f"{self.pred=}, {self.args=}"
 
+    def __repr__(self):
+        return str(self)
+
     def _map_to_subgraphs(self, sen_graph, strict=True):
         """
         helper function for map_to_subgraphs
@@ -222,16 +227,21 @@ class Triplet:
             words_to_i[word.lower()].add(i)
 
         edge = sen_graph["main_edge"]
-        rel_edge, relevant_toks, exact_match = toks2subedge(
-            edge, self.pred, all_toks, words_to_i
-        )
-        if not exact_match and strict:
-            logging.warning(
-                f"cannot map pred {self.pred} to subedge of {edge} (closest: {rel_edge}"
+        variables = {}
+
+        if self.pred is not None:
+            rel_edge, relevant_toks, exact_match = toks2subedge(
+                edge, self.pred, all_toks, words_to_i
             )
-            raise UnmappableTripletError
-        variables = {"REL": rel_edge}
-        mapped_pred = tuple(sorted(relevant_toks))
+            if not exact_match and strict:
+                logging.warning(
+                    f"cannot map pred {self.pred} to subedge of {edge} (closest: {rel_edge}"
+                )
+                raise UnmappableTripletError
+            variables["REL"] = rel_edge
+            mapped_pred = tuple(sorted(relevant_toks))
+        else:
+            mapped_pred = None
 
         mapped_args = []
         for i in range(len(self.args)):
@@ -240,7 +250,7 @@ class Triplet:
             )
             if not exact_match and strict:
                 logging.warning(
-                    f"cannot map arg {self.args[i]} to subedge of {edge} (closest: {rel_edge}"
+                    f"cannot map arg {self.args[i]} to subedge of {edge} (closest: {arg_edge}"
                 )
                 raise UnmappableTripletError()
             variables[f"ARG{i}"] = arg_edge
