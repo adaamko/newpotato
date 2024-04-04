@@ -178,21 +178,43 @@ class Triplet:
     A triplet consists  of a predicate and a list of arguments.
     """
 
-    def __init__(self, pred, args, sen_graph=None, strict=True):
+    def __init__(
+        self, pred, args, sen_graph=None, mapped=False, variables=None, strict=True
+    ):
         logging.debug(f"triple init got: pred: {pred}, args: {args}")
         self.pred = None if pred is None else tuple(int(i) for i in pred)
         self.args = tuple(tuple(int(i) for i in arg) for arg in args)
-        self.mapped = False
-        self.variables = None
+        self.mapped = mapped
+        self.variables = variables
         if sen_graph is not None:
             self.map_to_subgraphs(sen_graph, strict=strict)
 
     @staticmethod
     def from_json(data):
-        return Triplet(data["pred"], data["args"])
+        return Triplet(
+            data["pred"],
+            data["args"],
+            mapped=data["mapped"],
+            variables=data["variables"],
+        )
+
+    @staticmethod
+    def from_json_and_graph(data, sen_graph):
+        return Triplet(
+            data["pred"],
+            data["args"],
+            sen_graph=sen_graph,
+            mapped=data["mapped"],
+            variables=data["variables"],
+        )
 
     def to_json(self):
-        return {"pred": self.pred, "args": self.args}
+        return {
+            "pred": self.pred,
+            "args": self.args,
+            "mapped": self.mapped,
+            "variables": self.variables,
+        }
 
     def __eq__(self, other):
         return self.pred == other.pred and self.args == other.args
@@ -202,7 +224,9 @@ class Triplet:
 
     def to_str(self, graph):
         toks = [tok for tok in graph["spacy_sentence"]]
-        pred_phrase = "" if self.pred is None else "_".join(toks[a].text for a in self.pred)
+        pred_phrase = (
+            "" if self.pred is None else "_".join(toks[a].text for a in self.pred)
+        )
         args_str = ", ".join(
             "_".join(toks[a].text for a in phrase) for phrase in self.args
         )
@@ -274,6 +298,7 @@ class Triplet:
             )
             return False
         else:
+            self.pred = mapped_pred
             self.args = tuple(mapped_args)
             self.variables = variables
             self.mapped = True

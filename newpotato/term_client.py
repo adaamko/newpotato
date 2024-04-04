@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from newpotato.evaluate import HITLEvaluator
 from newpotato.hitl import HITLManager
-from newpotato.utils import print_tokens
+from newpotato.utils import get_triplets_from_user
 
 console = Console()
 
@@ -20,10 +20,12 @@ class NPTerminalClient:
             self.hitl = HITLManager()
         else:
             console.print(f"loading HITL state from {args.load_state}")
-            self.hitl = HITLManager.load(args.load_state)
+            self.hitl = HITLManager.load(args.load_state, args.oracle)
 
         if args.upload_file:
             self._upload_file(args.upload_file)
+
+        self.learn = args.learn
 
     def load_from_file(self):
         while True:
@@ -106,7 +108,7 @@ class NPTerminalClient:
 
     def print_rules(self):
         annotated_graphs = self.hitl.get_annotated_graphs()
-        rules = self.hitl.get_rules()
+        rules = self.hitl.get_rules(learn=self.learn)
 
         console.print("[bold green]Annotated Graphs:[/bold green]")
         console.print(annotated_graphs)
@@ -180,7 +182,7 @@ class NPTerminalClient:
                 for sen in self.hitl.get_unannotated_sentences(
                     random_order=True, max_sens=3
                 ):
-                    self.get_triplets_from_user(sen)
+                    get_triplets_from_user(sen, self.hitl, console)
             else:
                 cands = [
                     sen
@@ -200,17 +202,7 @@ class NPTerminalClient:
                 except (ValueError, IndexError):
                     console.print("[bold red]invalid choice[/bold red]")
                 else:
-                    self.get_triplets_from_user(sen)
-
-    def get_triplets_from_user(self, sentence):
-        print_tokens(sentence, self.hitl, console)
-
-        while True:
-            triplet = self.get_single_triplet_from_user(sentence, self.hitl, console)
-            if triplet is None:
-                break
-            else:
-                self.hitl.store_triplet(sentence, triplet, True)
+                    get_triplets_from_user(sen, self.hitl, console)
 
     def run(self):
         while True:
@@ -272,6 +264,8 @@ class NPTerminalClient:
 def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-e", "--learn", action="store_true")
+    parser.add_argument("-o", "--oracle", action="store_true")
     parser.add_argument("-l", "--load_state", default=None, type=str)
     parser.add_argument("-u", "--upload_file", default=None, type=str)
     return parser.parse_args()
@@ -281,7 +275,7 @@ def main():
     args = get_args()
     logging.basicConfig(
         format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
-        force=True
+        force=True,
     )
     logging.getLogger().setLevel(logging.INFO)
     if args.debug:

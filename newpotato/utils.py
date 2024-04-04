@@ -19,6 +19,10 @@ def _get_single_triplet_from_user(console):
     annotation = input("> ")
     if annotation == "":
         return None
+
+    if annotation == "O":
+        return "O"
+
     try:
         phrases = [
             tuple(int(n) for n in ids.split("_")) for ids in annotation.split(",")
@@ -33,7 +37,8 @@ def get_single_triplet_from_user(sentence, hitl, console, expect_mappable=True):
     console.print(
         """
         [bold cyan] Enter comma-separated list of predicate and args, with token IDs in each separated by underscores, e.g.: 0_The 1_boy 2_has 3_gone 4_to 5_school -> 2_3,0_1,4_5
-        Press enter to finish.
+        Alternatively, type O to get triplet from oracle (if loaded).
+        Press ENTER to finish.
         
         [/bold cyan]"""
     )
@@ -46,6 +51,9 @@ def get_single_triplet_from_user(sentence, hitl, console, expect_mappable=True):
         if triplet is False:
             # syntax error
             continue
+        if triplet == "O":
+            # oracle
+            return "O"
 
         pred, args = triplet
         mapped_triplet = Triplet(pred, args, graph)
@@ -58,15 +66,37 @@ def get_single_triplet_from_user(sentence, hitl, console, expect_mappable=True):
         return mapped_triplet
 
 
-def get_triplet_from_annotation(pred, args, sen, sen_graph, hitl, console, ask_user=True):
+def get_triplets_from_user(sentence, hitl, console):
+    print_tokens(sentence, hitl, console)
+
+    while True:
+        triplet = get_single_triplet_from_user(sentence, hitl, console)
+        if triplet is None:
+            break
+        elif triplet == "O":
+            if hitl.oracle is None:
+                console.print("[bold red]The Oracle is not loaded.[/bold red]")
+            if sentence not in hitl.oracle:
+                console.print(
+                    "[bold red]The Oracle does not annotate this sentence.[/bold red]"
+                )
+            for triplet, is_true in hitl.oracle[sentence]:
+                console.print(f"[bold cyan]Oracle says: {triplet}[/bold cyan]")
+                hitl.store_triplet(sentence, triplet, is_true)
+        else:
+            hitl.store_triplet(sentence, triplet, True)
+
+
+def get_triplet_from_annotation(
+    pred, args, sen, sen_graph, hitl, console, ask_user=True
+):
     triplet = Triplet(pred, args, sen_graph)
     if not triplet.mapped:
         console.print(
             f"[bold red]Could not map annotation {str(triplet)} to subedges)[/bold red]"
         )
         if not ask_user:
-            console.print(
-                "[bold red]Returning unmapped triplet[/bold red]")
+            console.print("[bold red]Returning unmapped triplet[/bold red]")
             return triplet
 
         console.print(
@@ -77,7 +107,7 @@ def get_triplet_from_annotation(pred, args, sen, sen_graph, hitl, console, ask_u
         if triplet is None:
             console.print("[bold red]No triplet returned[/bold red]")
     return triplet
-                
+
 
 def edge2toks(edge: Hyperedge, graph: Dict[str, Any]):
     """

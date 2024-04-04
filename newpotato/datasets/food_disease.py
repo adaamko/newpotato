@@ -19,11 +19,11 @@ def untokenize(entity):
 
 def load_food_disease_dataset(input_file, hitl):
     with open(input_file, newline="") as csvfile:
-        fixed_lines = [line.replace(" , ", " | ") for line in csvfile]
+        fixed_lines = [line.replace(", ", "| ") for line in csvfile]
 
     reader = csv.reader(fixed_lines)
     for orig_row in reader:
-        row = [field.replace(" | ", " , ") for field in orig_row]
+        row = [field.replace("| ", ", ") for field in orig_row]
         logging.debug(f"{row=}")
         (
             row_id,
@@ -60,10 +60,9 @@ def load_food_disease_dataset(input_file, hitl):
                 hitl.get_toks_from_txt(untokenize(disease_entity), sen),
             ]
         except AnnotatedWordsNotFoundError:
-            console.print(
-                f"[bold red]Could not find all words of annotation: {food_entity=}, {disease_entity=}[/bold red]"
-            )
-            args = None
+            logging.warning(f'Could not find all words of annotation: {food_entity=}, {disease_entity=}')
+            logging.warning('skipping')
+            continue
 
         logging.debug(f"FoodDisease args from text: {args=}")
         triplet = get_triplet_from_annotation(
