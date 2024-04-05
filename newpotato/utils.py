@@ -71,20 +71,27 @@ def get_triplets_from_user(sentence, hitl, console):
 
     while True:
         triplet = get_single_triplet_from_user(sentence, hitl, console)
+        
         if triplet is None:
             break
-        elif triplet == "O":
+
+        elif isinstance(triplet, Triplet):
+            hitl.store_triplet(sentence, triplet, True)
+
+        elif triplet in ("O", "A"):
             if hitl.oracle is None:
                 console.print("[bold red]The Oracle is not loaded.[/bold red]")
-            if sentence not in hitl.oracle:
+            elif sentence not in hitl.oracle:
                 console.print(
                     "[bold red]The Oracle does not annotate this sentence.[/bold red]"
                 )
-            for triplet, is_true in hitl.oracle[sentence]:
-                console.print(f"[bold cyan]Oracle says: {triplet}[/bold cyan]")
-                hitl.store_triplet(sentence, triplet, is_true)
+            else:
+                for o_triplet, is_true in hitl.oracle[sentence]:
+                    console.print(f"[bold cyan]Oracle says: {o_triplet}[/bold cyan]")
+                    if triplet == "A":
+                        hitl.store_triplet(sentence, o_triplet, is_true)
         else:
-            hitl.store_triplet(sentence, triplet, True)
+            raise ValueError('get_single_triplet_from_user must return Triplet, None, "O", or "A"')
 
 
 def get_triplet_from_annotation(

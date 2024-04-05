@@ -103,10 +103,12 @@ def _toks2subedge(
         else:
             if lowered_word in NON_ATOM_WORDS:
                 return edge, set(), set()
-            return edge, set(), toks
+            else:
+                return edge, set(), toks
 
     relevant_toks, irrelevant_toks = set(), set()
-    for subedge in edge:
+    subedges_to_keep = []
+    for i, subedge in enumerate(edge):
         s_edge, subedge_relevant_toks, subedge_irrelevant_toks = _toks2subedge(
             subedge, toks_to_cover, all_toks, words_to_i
         )
@@ -117,14 +119,24 @@ def _toks2subedge(
             )
             return s_edge, subedge_relevant_toks, subedge_irrelevant_toks
 
-        relevant_toks |= subedge_relevant_toks
-        irrelevant_toks |= subedge_irrelevant_toks
+        if len(subedge_relevant_toks) > 0 or (i == 0 and subedge.atom):
+            # the first subedge must be kept, to connect the rest (unless it is not atomic)
+            subedges_to_keep.append(s_edge)
+            relevant_toks |= subedge_relevant_toks
+            irrelevant_toks |= subedge_irrelevant_toks
 
-    # more than one relevant subedge OR no words covered
-    logging.debug(
-        f"_toks2subedge: returning {edge=}, {relevant_toks=}, {irrelevant_toks=}"
-    )
-    return edge, relevant_toks, irrelevant_toks
+    if len(relevant_toks) == 0:
+        # no words covered
+        logging.debug(
+            f"_toks2subedge: no words covered, returning {edge=}, {relevant_toks=}, {irrelevant_toks=}"
+        )
+        return edge, relevant_toks, irrelevant_toks
+    else:
+        pruned_edge = hedge(subedges_to_keep)
+        logging.debug(
+            f"_toks2subedge: returning {pruned_edge=}, {relevant_toks=}, {irrelevant_toks=}"
+        )
+        return pruned_edge, relevant_toks, irrelevant_toks
 
 
 def toks2subedge(
@@ -163,6 +175,7 @@ def toks2subedge(
     if toks_to_cover == relevant_toks:
         if len(irrelevant_toks) == 0:
             return subedge, relevant_toks, True
+        logging.warning(f"returning incomplete match: {irrelevant_toks=}")
         return subedge, relevant_toks, False
     else:
         words = [all_toks[t] for t in toks_to_cover]
@@ -217,7 +230,11 @@ class Triplet:
         }
 
     def __eq__(self, other):
-        return self.pred == other.pred and self.args == other.args
+        return (
+            isinstance(other, Triplet)
+            and self.pred == other.pred
+            and self.args == other.args
+        )
 
     def __hash__(self):
         return hash((self.pred, self.args))
