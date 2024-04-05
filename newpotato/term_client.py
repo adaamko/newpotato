@@ -1,16 +1,14 @@
 import argparse
-import json
 import logging
-from typing import Any, Dict
 
 # from rich import print
 from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
 
-from newpotato.datatypes import Triplet
 from newpotato.evaluate import HITLEvaluator
-from newpotato.hitl import AnnotatedWordsNotFoundError, HITLManager
+from newpotato.hitl import HITLManager
+from newpotato.utils import get_triplets_from_user
 
 console = Console()
 
@@ -22,10 +20,12 @@ class NPTerminalClient:
             self.hitl = HITLManager()
         else:
             console.print(f"loading HITL state from {args.load_state}")
-            self.hitl = HITLManager.load(args.load_state)
+            self.hitl = HITLManager.load(args.load_state, args.oracle)
 
         if args.upload_file:
             self._upload_file(args.upload_file)
+
+        self.learn = args.learn
 
     def load_from_file(self):
         while True:
@@ -108,7 +108,7 @@ class NPTerminalClient:
 
     def print_rules(self):
         annotated_graphs = self.hitl.get_annotated_graphs()
-        rules = self.hitl.get_rules()
+        rules = self.hitl.get_rules(learn=self.learn)
 
         console.print("[bold green]Annotated Graphs:[/bold green]")
         console.print(annotated_graphs)
@@ -154,12 +154,8 @@ class NPTerminalClient:
     def _upload_file(self, fn):
         if fn.endswith("txt"):
             self.upload_txt(fn)
-        elif fn.endswith("jsonl"):
-            self.upload_jsonl(fn)
         else:
-            console.print(
-                "[bold red]Unknown file format, must be txt or jsonl[/bold red]"
-            )
+            console.print("[bold red]Unknown file format, must be txt[/bold red]")
 
     def upload_file(self):
         console.print("[bold cyan]Enter path of txt or jsonl file:[/bold cyan]")
@@ -172,62 +168,6 @@ class NPTerminalClient:
             for line in tqdm(f):
                 self.hitl.get_graphs(line.strip())
         console.print("[bold cyan]Done![/bold cyan]")
-
-    def upload_jsonl(self, fn):
-        console.print("[bold cyan]Reading jsonl...[/bold cyan]")
-        with open(fn) as f:
-            for i, line in tqdm(enumerate(f)):
-                data = json.loads(line)
-                self.get_triplets_from_annotation(data)
-        console.print("[bold cyan]Done![/bold cyan]")
-
-    def get_triplets_from_annotation(self, data: Dict[str, Any]):
-        """
-        Get and store annotated triplets.
-
-        Args:
-            data (dict): A dictionary with the keys "sen" and "triplets".
-                Triplet annotations must be provided as a list of dictionaries with the keys
-                "rel" and "args", each of which must be a substring of the sentence.
-        """
-        sen = data["sen"]
-        graphs = self.hitl.get_graphs(sen)
-        if len(graphs) > 1:
-            print("sentence split into two:", data["sen"])
-            print([graph["text"] for graph in graphs])
-            raise Exception()
-        sen_graph = graphs[0]
-        sen = sen_graph["text"]
-        for text_triplet in data["triplets"]:
-            try:
-                pred = self.hitl.get_toks_from_txt(text_triplet["rel"], sen)
-                args = [
-                    self.hitl.get_toks_from_txt(arg_txt, sen)
-                    for arg_txt in text_triplet["args"]
-                ]
-                triplet = Triplet(pred, args, sen_graph)
-            except AnnotatedWordsNotFoundError:
-                triplet = None
-
-            if triplet is None or not triplet.mapped:
-                if triplet is None:
-                    console.print(
-                        f"[bold red]Could not find all words of annotation: pred={text_triplet['rel']}, args={text_triplet['args']}[/bold red]"
-                    )
-                else:
-                    console.print(
-                        f"[bold red]Could not map annotation {str(triplet)} to subedges)[/bold red]"
-                    )
-
-                console.print(
-                    "[bold red]Please provide alternative (or press ENTER to skip)[/bold red]"
-                )
-                self.print_tokens(sen)
-                triplet = self.get_single_triplet_from_user(sen)
-                if triplet is None:
-                    continue
-
-            self.hitl.store_triplet(sen, triplet, True)
 
     def annotate(self):
         while True:
@@ -242,7 +182,7 @@ class NPTerminalClient:
                 for sen in self.hitl.get_unannotated_sentences(
                     random_order=True, max_sens=3
                 ):
-                    self.get_triplets_from_user(sen)
+                    get_triplets_from_user(sen, self.hitl, console)
             else:
                 cands = [
                     sen
@@ -262,63 +202,7 @@ class NPTerminalClient:
                 except (ValueError, IndexError):
                     console.print("[bold red]invalid choice[/bold red]")
                 else:
-                    self.get_triplets_from_user(sen)
-
-    def print_tokens(self, sentence):
-        tokens = self.hitl.get_tokens(sentence)
-        console.print("[bold cyan]Tokens:[/bold cyan]")
-        console.print(" ".join(f"{i}_{tok}" for i, tok in enumerate(tokens)))
-
-    def get_triplets_from_user(self, sentence):
-        self.print_tokens(sentence)
-
-        while True:
-            triplet = self.get_single_triplet_from_user(sentence)
-            if triplet is None:
-                break
-            else:
-                self.hitl.store_triplet(sentence, triplet, True)
-
-    def _get_single_triplet_from_user(self):
-        annotation = input("> ")
-        if annotation == "":
-            return None
-        try:
-            phrases = [
-                tuple(int(n) for n in ids.split("_")) for ids in annotation.split(",")
-            ]
-            return phrases[0], phrases[1:]
-        except ValueError:
-            console.print("[bold red]Could not parse this:[/bold red]", annotation)
-            return False
-
-    def get_single_triplet_from_user(self, sentence, expect_mappable=True):
-        console.print(
-            """
-            [bold cyan] Enter comma-separated list of predicate and args, with token IDs in each separated by underscores, e.g.: 0_The 1_boy 2_has 3_gone 4_to 5_school -> 2_3,0_1,4_5
-            Press enter to finish.
-            
-            [/bold cyan]"""
-        )
-        graph = self.hitl.parsed_graphs[sentence]
-        while True:
-            triplet = self._get_single_triplet_from_user()
-            if triplet is None:
-                # user is done
-                return None
-            if triplet is False:
-                # syntax error
-                continue
-
-            pred, args = triplet
-            mapped_triplet = Triplet(pred, args, graph)
-            if expect_mappable and mapped_triplet.mapped is False:
-                console.print(
-                    f"[bold red] Could not map annotation {triplet} to subedges, please provide alternative (or press ENTER to skip)[/bold red]"
-                )
-                continue
-
-            return mapped_triplet
+                    get_triplets_from_user(sen, self.hitl, console)
 
     def run(self):
         while True:
@@ -380,6 +264,8 @@ class NPTerminalClient:
 def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-e", "--learn", action="store_true")
+    parser.add_argument("-o", "--oracle", action="store_true")
     parser.add_argument("-l", "--load_state", default=None, type=str)
     parser.add_argument("-u", "--upload_file", default=None, type=str)
     return parser.parse_args()
@@ -388,8 +274,8 @@ def get_args():
 def main():
     args = get_args()
     logging.basicConfig(
-        format="%(asctime)s : "
-        + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s"
+        format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
+        force=True,
     )
     logging.getLogger().setLevel(logging.INFO)
     if args.debug:

@@ -101,10 +101,14 @@ def _toks2subedge(
         if len(relevant_toks) > 0:
             return edge, relevant_toks, set()
         else:
-            return edge, set(), toks
+            if lowered_word in NON_ATOM_WORDS:
+                return edge, set(), set()
+            else:
+                return edge, set(), toks
 
     relevant_toks, irrelevant_toks = set(), set()
-    for subedge in edge:
+    subedges_to_keep = []
+    for i, subedge in enumerate(edge):
         s_edge, subedge_relevant_toks, subedge_irrelevant_toks = _toks2subedge(
             subedge, toks_to_cover, all_toks, words_to_i
         )
@@ -115,14 +119,24 @@ def _toks2subedge(
             )
             return s_edge, subedge_relevant_toks, subedge_irrelevant_toks
 
-        relevant_toks |= subedge_relevant_toks
-        irrelevant_toks |= subedge_irrelevant_toks
+        if len(subedge_relevant_toks) > 0 or (i == 0 and subedge.atom):
+            # the first subedge must be kept, to connect the rest (unless it is not atomic)
+            subedges_to_keep.append(s_edge)
+            relevant_toks |= subedge_relevant_toks
+            irrelevant_toks |= subedge_irrelevant_toks
 
-    # more than one relevant subedge OR no words covered
-    logging.debug(
-        f"_toks2subedge: returning {edge=}, {relevant_toks=}, {irrelevant_toks=}"
-    )
-    return edge, relevant_toks, irrelevant_toks
+    if len(relevant_toks) == 0:
+        # no words covered
+        logging.debug(
+            f"_toks2subedge: no words covered, returning {edge=}, {relevant_toks=}, {irrelevant_toks=}"
+        )
+        return edge, relevant_toks, irrelevant_toks
+    else:
+        pruned_edge = hedge(subedges_to_keep)
+        logging.debug(
+            f"_toks2subedge: returning {pruned_edge=}, {relevant_toks=}, {irrelevant_toks=}"
+        )
+        return pruned_edge, relevant_toks, irrelevant_toks
 
 
 def toks2subedge(
@@ -161,6 +175,7 @@ def toks2subedge(
     if toks_to_cover == relevant_toks:
         if len(irrelevant_toks) == 0:
             return subedge, relevant_toks, True
+        logging.warning(f"returning incomplete match: {irrelevant_toks=}")
         return subedge, relevant_toks, False
     else:
         words = [all_toks[t] for t in toks_to_cover]
@@ -176,31 +191,59 @@ class Triplet:
     A triplet consists  of a predicate and a list of arguments.
     """
 
-    def __init__(self, pred, args, sen_graph=None, strict=True):
+    def __init__(
+        self, pred, args, sen_graph=None, mapped=False, variables=None, strict=True
+    ):
         logging.debug(f"triple init got: pred: {pred}, args: {args}")
-        self.pred = tuple(int(i) for i in pred)
+        self.pred = None if pred is None else tuple(int(i) for i in pred)
         self.args = tuple(tuple(int(i) for i in arg) for arg in args)
-        self.mapped = False
-        self.variables = None
+        self.mapped = mapped
+        self.variables = variables
         if sen_graph is not None:
             self.map_to_subgraphs(sen_graph, strict=strict)
 
     @staticmethod
     def from_json(data):
-        return Triplet(data["pred"], data["args"])
+        return Triplet(
+            data["pred"],
+            data["args"],
+            mapped=data["mapped"],
+            variables=data["variables"],
+        )
+
+    @staticmethod
+    def from_json_and_graph(data, sen_graph):
+        return Triplet(
+            data["pred"],
+            data["args"],
+            sen_graph=sen_graph,
+            mapped=data["mapped"],
+            variables=data["variables"],
+        )
 
     def to_json(self):
-        return {"pred": self.pred, "args": self.args}
+        return {
+            "pred": self.pred,
+            "args": self.args,
+            "mapped": self.mapped,
+            "variables": self.variables,
+        }
 
     def __eq__(self, other):
-        return self.pred == other.pred and self.args == other.args
+        return (
+            isinstance(other, Triplet)
+            and self.pred == other.pred
+            and self.args == other.args
+        )
 
     def __hash__(self):
         return hash((self.pred, self.args))
 
     def to_str(self, graph):
         toks = [tok for tok in graph["spacy_sentence"]]
-        pred_phrase = "_".join(toks[a].text for a in self.pred)
+        pred_phrase = (
+            "" if self.pred is None else "_".join(toks[a].text for a in self.pred)
+        )
         args_str = ", ".join(
             "_".join(toks[a].text for a in phrase) for phrase in self.args
         )
@@ -212,6 +255,9 @@ class Triplet:
         else:
             return f"{self.pred=}, {self.args=}"
 
+    def __repr__(self):
+        return str(self)
+
     def _map_to_subgraphs(self, sen_graph, strict=True):
         """
         helper function for map_to_subgraphs
@@ -222,16 +268,21 @@ class Triplet:
             words_to_i[word.lower()].add(i)
 
         edge = sen_graph["main_edge"]
-        rel_edge, relevant_toks, exact_match = toks2subedge(
-            edge, self.pred, all_toks, words_to_i
-        )
-        if not exact_match and strict:
-            logging.warning(
-                f"cannot map pred {self.pred} to subedge of {edge} (closest: {rel_edge}"
+        variables = {}
+
+        if self.pred is not None:
+            rel_edge, relevant_toks, exact_match = toks2subedge(
+                edge, self.pred, all_toks, words_to_i
             )
-            raise UnmappableTripletError
-        variables = {"REL": rel_edge}
-        mapped_pred = tuple(sorted(relevant_toks))
+            if not exact_match and strict:
+                logging.warning(
+                    f"cannot map pred {self.pred} to subedge of {edge} (closest: {rel_edge}"
+                )
+                raise UnmappableTripletError
+            variables["REL"] = rel_edge
+            mapped_pred = tuple(sorted(relevant_toks))
+        else:
+            mapped_pred = None
 
         mapped_args = []
         for i in range(len(self.args)):
@@ -240,7 +291,7 @@ class Triplet:
             )
             if not exact_match and strict:
                 logging.warning(
-                    f"cannot map arg {self.args[i]} to subedge of {edge} (closest: {rel_edge}"
+                    f"cannot map arg {self.args[i]} to subedge of {edge} (closest: {arg_edge}"
                 )
                 raise UnmappableTripletError()
             variables[f"ARG{i}"] = arg_edge
@@ -264,6 +315,7 @@ class Triplet:
             )
             return False
         else:
+            self.pred = mapped_pred
             self.args = tuple(mapped_args)
             self.variables = variables
             self.mapped = True

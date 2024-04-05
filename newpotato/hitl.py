@@ -41,7 +41,8 @@ class Extractor:
     @staticmethod
     def from_json(classifier_data: Dict[str, Any]):
         extractor = Extractor()
-        extractor.classifier = classifier_from_json(classifier_data)
+        if classifier_data is not None:
+            extractor.classifier = classifier_from_json(classifier_data)
         return extractor
 
     def to_json(self) -> Dict[str, List]:
@@ -170,6 +171,7 @@ class HITLManager:
         self.latest = None
         self.parsed_graphs = {}
         self.text_to_triplets = defaultdict(list)
+        self.oracle = None
         self.extractor = Extractor()
         logging.info("HITL manager initialized")
 
@@ -179,33 +181,40 @@ class HITLManager:
     def load_extractor(self, extractor_data):
         self.extractor = Extractor.from_json(extractor_data)
 
-    def load_data(self, graph_data, triplet_data):
+    def load_data(self, graph_data, triplet_data, oracle=False):
         self.parsed_graphs = {
             text: GraphParse.from_json(graph_dict, self.spacy_vocab)
             for text, graph_dict in graph_data.items()
         }
+
         text_to_triplets = {
-            text: [(Triplet.from_json(triplet[0]), triplet[1]) for triplet in triplets]
+            text: [
+                (
+                    Triplet.from_json_and_graph(triplet[0], self.parsed_graphs[text]),
+                    triplet[1],
+                )
+                for triplet in triplets
+            ]
             for text, triplets in triplet_data.items()
         }
-        self.text_to_triplets = defaultdict(list, text_to_triplets)
 
-        # map triplets to subgraphs
-        for text, triplets in self.text_to_triplets.items():
-            for triplet, _ in triplets:
-                success = triplet.map_to_subgraphs(self.parsed_graphs[text])
-                if not success:
-                    logging.warning(f"failed to map {triplet=} for {text=}, skipping")
+        if oracle:
+            self.oracle = text_to_triplets
+            self.text_to_triplets = defaultdict(list)
+        else:
+            self.text_to_triplets = defaultdict(list, text_to_triplets)
 
     @staticmethod
-    def load(fn):
+    def load(fn, oracle=False):
         logging.info(f"loading HITL state from {fn=}")
         with open(fn) as f:
             data = json.load(f)
-        return HITLManager.from_json(data)
+        return HITLManager.from_json(data, oracle=oracle)
 
     @staticmethod
-    def from_json(data: Dict[str, Any], parser_url="http://localhost:7277"):
+    def from_json(
+        data: Dict[str, Any], parser_url="http://localhost:7277", oracle=False
+    ):
         """
         load HITLManager from saved state
 
@@ -217,7 +226,7 @@ class HITLManager:
         """
         hitl = HITLManager(parser_url)
         hitl.check_parser(data["parser_params"])
-        hitl.load_data(data["parsed_graphs"], data["triplets"])
+        hitl.load_data(data["parsed_graphs"], data["triplets"], oracle=oracle)
         hitl.load_extractor(data["extractor_data"])
         return hitl
 
@@ -278,7 +287,7 @@ class HITLManager:
         """
         return self.text_parser.parse(text)
 
-    def get_rules(self, learn: bool = False) -> List[Rule]:
+    def get_rules(self, learn: bool = True) -> List[Rule]:
         """
         Get the rules.
 
@@ -434,7 +443,9 @@ class HITLManager:
         logging.info(f"appending to triplets: {text=}, {triplet=}")
         self.text_to_triplets[text].append((triplet, positive))
 
-    def get_toks_from_txt(self, words_txt: str, sen: str) -> Tuple[int, ...]:
+    def get_toks_from_txt(
+        self, words_txt: str, sen: str, ignore_brackets: bool = False
+    ) -> Tuple[int, ...]:
         """
         Map a substring of a sentence to its tokens. Used to parse annotations of triplets
         provided as plain text strings of the predicate and the arguments
@@ -442,12 +453,16 @@ class HITLManager:
         Args:
             words_txt (str): the substring of the sentence
             sen (str): the sentence
+            ignore_brackets (bool): whether to remove brackets from the text before matching (required for ORE annotation)
 
         Returns:
             Tuple[int, ...] the tokens of the sentence corresponding to the substring
         """
         logging.debug(f"{words_txt=}, {sen=}")
-        pattern = re.escape(re.sub('["()]', "", words_txt))
+        if ignore_brackets:
+            pattern = re.escape(re.sub('["()]', "", words_txt))
+        else:
+            pattern = re.escape(words_txt)
         logging.debug(f"{pattern=}")
         if pattern[0].isalpha():
             pattern = r"\b" + pattern
