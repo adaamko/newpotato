@@ -5,7 +5,7 @@ from typing import Any, Dict
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from newpotato.parser import TextParser
+from newpotato.extractors.graphbrain_parser import GraphbrainParser
 
 logging.basicConfig(
     format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
@@ -13,7 +13,7 @@ logging.basicConfig(
 )
 
 app = FastAPI()
-parser = TextParser()
+parser = GraphbrainParser()
 
 
 class TextToParse(BaseModel):

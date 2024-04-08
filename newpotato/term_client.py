@@ -107,14 +107,8 @@ class NPTerminalClient:
         self.print_triplets(triplets, max_n=10)
 
     def print_rules(self):
-        annotated_graphs = self.hitl.get_annotated_graphs()
-        rules = self.hitl.get_rules(learn=self.learn)
-
-        console.print("[bold green]Annotated Graphs:[/bold green]")
-        console.print(annotated_graphs)
-
-        console.print("[bold green]Extracted Rules:[/bold green]")
-        console.print(rules)
+        self.hitl.get_rules()
+        self.hitl.print_rules(console)
 
     def print_triplets(self, triplets_by_sen, max_n=None):
         console.print("[bold green]Current Triplets:[/bold green]")
@@ -149,7 +143,7 @@ class NPTerminalClient:
     def get_sentence(self):
         console.print("[bold cyan]Enter new sentence:[/bold cyan]")
         sen = input("> ")
-        self.hitl.get_graphs(sen)
+        self.hitl.add_text(sen)
 
     def _upload_file(self, fn):
         if fn.endswith("txt"):
@@ -204,7 +198,7 @@ class NPTerminalClient:
                 else:
                     get_triplets_from_user(sen, self.hitl, console)
 
-    def run(self):
+    def _run(self):
         while True:
             self.print_status()
             console.print(
@@ -259,6 +253,19 @@ class NPTerminalClient:
 
             else:
                 console.print("[bold red]Invalid choice[/bold red]")
+
+    def run(self):
+        try:
+            self._run()
+        except KeyboardInterrupt:
+            while True:
+                console.print("[bold red]Save HITL state? (y/n)[/bold red]")
+                s = input().strip().lower()
+                if s == "y":
+                    self.write_to_file()
+                    break
+                elif s == "n":
+                    break
 
 
 def get_args():
