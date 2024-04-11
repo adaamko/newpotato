@@ -3,17 +3,13 @@ import logging
 import random
 import re
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
-from graphbrain.hyperedge import Hyperedge
-from graphbrain.learner.classifier import Classifier
-from graphbrain.learner.classifier import from_json as classifier_from_json
-from graphbrain.learner.rule import Rule
 
-from newpotato.datatypes import GraphParse, Triplet
-from newpotato.parser import TextParserClient
-from newpotato.utils import matches2triplets
+from newpotato.datatypes import Triplet
+from newpotato.extractors.extractor import Extractor
+from newpotato.extractors.graphbrain_extractor import GraphbrainExtractor
 
 
 class AnnotatedWordsNotFoundError(Exception):
@@ -29,126 +25,6 @@ class AnnotatedWordsNotFoundError(Exception):
 
 
 @dataclass
-class Extractor:
-    """A class to extract triplets from graphs, texts, and annotated graphs.
-
-    Attributes:
-        classifier (Optional[Classifier]): The classifier to use for extraction.
-    """
-
-    classifier: Optional[Classifier] = field(default=None)
-
-    @staticmethod
-    def from_json(classifier_data: Dict[str, Any]):
-        extractor = Extractor()
-        if classifier_data is not None:
-            extractor.classifier = classifier_from_json(classifier_data)
-        return extractor
-
-    def to_json(self) -> Dict[str, List]:
-        if self.classifier is None:
-            return None
-        return self.classifier.to_json()
-
-    def get_rules(self) -> List[Rule]:
-        """
-        Get the rules.
-        """
-        if self.classifier is None:
-            return []
-        return [rule.pattern for rule in self.classifier.rules]
-
-    def extract_rules(self, learn: bool = False):
-        """
-        Extract the rules from the annotated graphs.
-        """
-        assert self.classifier is not None, "classifier not initialized"
-        if learn:
-            self.classifier.learn()
-        else:
-            self.classifier.extract_patterns()
-            self.classifier._index_rules()
-
-    def get_annotated_graphs_from_classifier(self) -> List[str]:
-        """
-        Get the annotated graphs
-
-        Returns:
-            List[str]: The annotated graphs. An annotated graph is a hyperedge that has been annotated with variables. e.g. "REL(ARG1, ARG2)"
-        """
-        assert self.classifier is not None, "classifier not initialized"
-        return [str(rule[0]) for rule in self.classifier.cases]
-
-    def add_cases(
-        self,
-        parsed_graphs: Dict[str, Dict[str, Any]],
-        text_to_triplets: Dict[str, List[Triplet]],
-    ):
-        """
-        Add cases to the classifier.
-
-        Args:
-            parsed_graphs (Dict[str, Dict[str, Any]]): The parsed graphs.
-            text_to_triplets (Dict[str, List[Tuple]]): The texts and corresponding triplets.
-        """
-        classifier = Classifier()
-        for text, triplets in text_to_triplets.items():
-            graph = parsed_graphs[text]
-            main_edge = graph["main_edge"]
-            for triplet, positive in triplets:
-                if not triplet.mapped:
-                    logging.warning(
-                        f"trying to map unmapped triplet {triplet} to {graph}"
-                    )
-                    success = triplet.map_to_subgraphs(graph)
-                    if not success:
-                        logging.warning("failed to map triplet, skipping")
-                        continue
-
-                logging.info("adding case:")
-                logging.info(f"{text=}, {main_edge=}")
-                logging.info(f"{triplet=}, {triplet.variables=}, positive: {positive}")
-
-                # positive means whether we want to treat it as a positive or negative example
-                # this helps graphbrain to learn the rules
-                classifier.add_case(
-                    main_edge, positive=positive, variables=triplet.variables
-                )
-
-        self.classifier = classifier
-
-    def classify(self, graph: Hyperedge) -> Tuple[List[Dict[str, Any]], List[str]]:
-        """
-        Classify the graph.
-
-        Args:
-            graph (Hyperedge): The graph to classify.
-
-        Returns:
-            Tuple[List[Dict[str, Any]], List[str]]: The matches and the rules triggered.
-        """
-        assert self.classifier is not None, "classifier not initialized"
-
-        try:
-            matches = self.classifier.classify(graph)
-            rule_ids_triggered = self.classifier.rules_triggered(graph)
-            logging.debug(f"{self.classifier.rules=}")
-            logging.debug(f"{rule_ids_triggered=}")
-            rules_triggered = [
-                str(self.classifier.rules[rule_id - 1].pattern)
-                for rule_id in rule_ids_triggered
-            ]
-        except AttributeError as err:
-            logging.error(f"Graphbrain classifier threw exception:\n{err}")
-            matches, rules_triggered = [], []
-
-        logging.info(f"classifier matches: {matches}")
-        logging.info(f"classifier rules triggered: {rules_triggered}")
-
-        return matches, rules_triggered
-
-
-@dataclass
 class HITLManager:
     """A class to manage the HITL process and store parsed graphs.
 
@@ -161,36 +37,25 @@ class HITLManager:
             triplets.
         latest (Optional[str]): The latest sentence.
         extractor (Extractor): The extractor that uses classifiers to extract triplets from graphs.
-        parser (TextParser): The text parser that parses text into graphs.
-        parser_params (Dict): parameters to be used to initialize a TextParser object
     """
 
     def __init__(self, parser_url: Optional[str] = "http://localhost:7277"):
-        self.text_parser = TextParserClient(parser_url)
-        self.spacy_vocab = self.text_parser.get_vocab()
         self.latest = None
-        self.parsed_graphs = {}
+        self.sentences = {}
         self.text_to_triplets = defaultdict(list)
         self.oracle = None
-        self.extractor = Extractor()
+        self.extractor = GraphbrainExtractor()
         logging.info("HITL manager initialized")
-
-    def check_parser(self, parser_params):
-        self.text_parser.check_params(parser_params)
 
     def load_extractor(self, extractor_data):
         self.extractor = Extractor.from_json(extractor_data)
 
-    def load_data(self, graph_data, triplet_data, oracle=False):
-        self.parsed_graphs = {
-            text: GraphParse.from_json(graph_dict, self.spacy_vocab)
-            for text, graph_dict in graph_data.items()
-        }
-
+    def load_data(self, sentences, triplet_data, oracle=False):
+        self.sentences = sentences
         text_to_triplets = {
             text: [
                 (
-                    Triplet.from_json_and_graph(triplet[0], self.parsed_graphs[text]),
+                    Triplet.from_json(triplet[0]),
                     triplet[1],
                 )
                 for triplet in triplets
@@ -225,8 +90,7 @@ class HITLManager:
             HITLManager: a new HITLManager object with the restored state
         """
         hitl = HITLManager(parser_url)
-        hitl.check_parser(data["parser_params"])
-        hitl.load_data(data["parsed_graphs"], data["triplets"], oracle=oracle)
+        hitl.load_data(data["sentences"], data["triplets"], oracle=oracle)
         hitl.load_extractor(data["extractor_data"])
         return hitl
 
@@ -240,15 +104,12 @@ class HITLManager:
         """
 
         return {
-            "parsed_graphs": {
-                text: graph.to_json() for text, graph in self.parsed_graphs.items()
-            },
+            "sentences": self.sentences,
             "triplets": {
                 text: [(triplet[0].to_json(), triplet[1]) for triplet in triplets]
                 for text, triplets in self.text_to_triplets.items()
             },
             "extractor_data": self.extractor.to_json(),
-            "parser_params": self.text_parser.get_params(),
         }
 
     def save(self, fn: str):
@@ -270,56 +131,27 @@ class HITLManager:
             n_rules = len(self.extractor.classifier.rules)
 
         return {
-            "n_sens": len(self.parsed_graphs),
+            "n_sens": len(self.sentences),
             "n_annotated": len(self.text_to_triplets),
             "n_rules": n_rules,
         }
 
-    def parse_text(self, text: str) -> List[GraphParse]:
-        """
-        Parse the given text.
+    def add_text(self, text: str):
+        self.sentences.update(
+            {
+                sen: self.extractor.get_tokens(sen)
+                for sen in self.extractor.get_sentences(text)
+            }
+        )
 
-        Args:
-            text (str): The text to parse.
+    def get_rules(self, *args, **kwargs):
+        return self.extractor.get_rules(self.text_to_triplets, *args, **kwargs)
 
-        Returns:
-            List[Dict[str, Any]]: The parsed graphs.
-        """
-        return self.text_parser.parse(text)
+    def print_rules(self, console):
+        return self.extractor.print_rules(console)
 
-    def get_rules(self, learn: bool = True) -> List[Rule]:
-        """
-        Get the rules.
-
-        Args:
-            learn (bool): whether to run graphbrain classifier's learn function.
-                If False (default), only extract_patterns is called
-        """
-
-        _ = self.get_annotated_graphs()
-        self.extractor.extract_rules(learn=learn)
-
-        return self.extractor.get_rules()
-
-    def infer_triplets(self, sen: str) -> List[Triplet]:
-        """
-        match rules against sentence and return triplets corresponding to the matches
-
-        Args:
-            sen (str): the sentence to perform inference on
-
-        Returns:
-            List[Triple]: list of triplets inferred
-        """
-        logging.debug(f'inferring triplets for: "{sen}"')
-        graph = self.parsed_graphs[sen]
-        logging.debug(f'graph: "{graph}"')
-        matches = self.match_rules(sen)
-        logging.debug(f'matches: "{matches}"')
-        triplets = matches2triplets(matches, graph)
-        logging.debug(f'triplets: "{triplets}"')
-
-        return triplets
+    def infer_triplets(self, sen: str, **kwargs) -> List[Triplet]:
+        return self.extractor.infer_triplets(sen, **kwargs)
 
     def triplets_to_str(self, triplets: List[Triplet], sen: str) -> List[str]:
         """
@@ -334,39 +166,6 @@ class HITLManager:
         """
         return [str(triplet) for triplet in triplets]
 
-    def get_annotated_graphs(self) -> List[str]:
-        """
-        Get the annotated graphs.
-        """
-
-        self.extractor.add_cases(self.parsed_graphs, self.text_to_triplets)
-
-        return self.extractor.get_annotated_graphs_from_classifier()
-
-    def add_text_to_graphs(self, text: str) -> None:
-        """Add the given text to the graphs.
-
-        Args:
-            text (str): The text to add to the graphs.
-
-        Returns:
-            None
-        """
-        self.get_graphs(text)
-
-    def is_parsed(self, text: str) -> bool:
-        """
-        Check if the given text is parsed.
-        """
-
-        return text in self.parsed_graphs
-
-    def get_tokens(self, text: str) -> List[str]:
-        """
-        Get the tokens of the given text.
-        """
-        return [tok for tok in self.parsed_graphs[text]["spacy_sentence"]]
-
     def get_true_triplets(self) -> Dict[str, List[Triplet]]:
         """
         Get the triplets, return everything except the latest triplets.
@@ -380,25 +179,6 @@ class HITLManager:
             for sen, triplets in self.text_to_triplets.items()
             if sen != "latest"
         }
-
-    def get_graphs(self, text: str) -> List[Dict[str, Any]]:
-        """
-        Get graphs for text, parsing it if necessary
-
-        Args:
-            text (str): the text to get the graphs for
-            graphs (List[Dict[str, Any]]): the graphs corresponding to the text
-        """
-        if text in self.parsed_graphs:
-            return [self.parsed_graphs[text]]
-
-        graphs = self.parse_text(text)
-        for graph in graphs:
-            self.latest = text
-            self.parsed_graphs[graph["text"]] = graph
-            self.parsed_graphs["latest"] = graph
-
-        return graphs
 
     def delete_triplet(self, text: str, triplet: Triplet):
         """
@@ -439,7 +219,6 @@ class HITLManager:
                 self.latest is not None
             ), "no parsed graphs stored, can't use `latest`"
             return self.store_triplet(self.latest, triplet, positive)
-        assert self.is_parsed(text), f"unparsed text: {text}"
         logging.info(f"appending to triplets: {text=}, {triplet=}")
         self.text_to_triplets[text].append((triplet, positive))
 
@@ -515,7 +294,7 @@ class HITLManager:
         """
         sens = [
             sen
-            for sen in self.parsed_graphs
+            for sen in self.sentences
             if sen != "latest" and sen not in self.text_to_triplets
         ]
         n_graphs = len(sens)
@@ -531,58 +310,3 @@ class HITLManager:
             )
         else:
             yield from sens[:max_n]
-
-    def match_rules(self, sen: str) -> List[Dict]:
-        """
-        match rules against sentence by passing the sentence's graph to the extractor
-
-        Args:
-            sen (str): the sentence to be matched against
-
-        Returns:
-            List[Dict] a list of hypergraphs corresponding to the matches
-        """
-        graphs = self.get_graphs(sen)
-        all_matches = []
-        for graph in graphs:
-            main_graph = graph["main_edge"]
-            matches, _ = self.extractor.classify(main_graph)
-            all_matches += matches
-        return all_matches
-
-    def extract_triplets_from_text(
-        self, text: str, convert_to_text: bool = False
-    ) -> Dict[str, Any]:
-        """
-        Extract the triplets from the given text with the Extractor.
-        First the text is parsed into graphs, then the graphs are classified by the Extractor.
-
-        Args:
-            text (str): The text to extract triplets from.
-
-        Returns:
-            Dict[str, Any]: The matches and rules triggered. The matches are a list of dicts, where each dict is a triplet. The rules triggered are a list of strings, where each string is a rule.
-        """
-
-        graphs = self.get_graphs(text)
-        matches_by_text = {
-            graph["text"]: {"matches": [], "rules_triggered": [], "triplets": []}
-            for graph in graphs
-        }
-
-        for graph in graphs:
-            matches, rules_triggered = self.extractor.classify(graph["main_edge"])
-            logging.info(f"matches: {matches}")
-            triplets = matches2triplets(matches, graph)
-            logging.info(f"triplets: {triplets}")
-
-            if convert_to_text:
-                matches = [
-                    {k: v.label() for k, v in match.items()} for match in matches
-                ]
-
-            matches_by_text[graph["text"]]["matches"] = matches
-            matches_by_text[graph["text"]]["rules_triggered"] = rules_triggered
-            matches_by_text[graph["text"]]["triplets"] = triplets
-
-        return matches_by_text
