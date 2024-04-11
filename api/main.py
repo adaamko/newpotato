@@ -119,7 +119,7 @@ def parse_text(text_to_parse: TextToParse):
 
     logging.info("Initiating text parsing.")
     try:
-        hitl_manager.get_graphs(text_to_parse.text)
+        hitl_manager.extractor.get_graphs(text_to_parse.text)
         logging.info("Text parsing and storage successful.")
         return {"status": "ok"}
     except Exception as e:
@@ -138,9 +138,10 @@ def annotate_text(annotation: Annotation) -> Dict[str, Any]:
 
     logging.info("Initiating annotation storage.")
     try:
-        graph = hitl_manager.get_graphs(annotation.text)[0]
+        graph = hitl_manager.extractor.get_graphs(annotation.text)[0]
         triplet = Triplet(annotation.pred, annotation.args, graph)
-        if not triplet.mapped:
+        mapped_triplet = hitl_manager.extractor.map_triplet(triplet, annotation.text)
+        if mapped_triplet is False:
             logging.warning("Triplet not mapped.")
             return {
                 "status": "error",
@@ -148,7 +149,7 @@ def annotate_text(annotation: Annotation) -> Dict[str, Any]:
                 "graph": graph.to_json(),
             }
 
-        hitl_manager.store_triplet(annotation.text, triplet, True)
+        hitl_manager.store_triplet(annotation.text, mapped_triplet, True)
 
         logging.info("Annotation storage successful.")
         return {"status": "ok"}
@@ -169,10 +170,10 @@ def get_tokens(text: str) -> Dict[str, Any]:
         Dict[str, Any]: Dictionary containing tokens.
     """
     logging.info(f"Retrieving tokens for text: {text}.")
-    if not hitl_manager.is_parsed(text):
+    if not hitl_manager.extractor.is_parsed(text):
         logging.warning("Text not parsed.")
         raise HTTPException(status_code=400, detail="Text not parsed")
-    tokens = hitl_manager.get_tokens(text)
+    tokens = hitl_manager.extractor.get_tokens(text)
     indexed_tokens = [
         {"index": i, "token": str(token)} for i, token in enumerate(tokens)
     ]
@@ -245,7 +246,7 @@ def delete_triplet(annotation: Annotation) -> Dict[str, Any]:
         logging.info(
             f"Annotation: {annotation.text}, {annotation.pred}, {annotation.args}"
         )
-        graph = hitl_manager.get_graphs(annotation.text)[0]
+        graph = hitl_manager.extractor.get_graphs(annotation.text)[0]
         triplet = Triplet(annotation.pred, annotation.args, graph)
         logging.info(f"Deleting triplet: {triplet}")
         hitl_manager.delete_triplet(annotation.text, triplet)
@@ -266,7 +267,7 @@ def get_sentences() -> Dict[str, List[str]]:
     """
     logging.info("Initiating sentence retrieval.")
     try:
-        parsed_graphs = hitl_manager.parsed_graphs
+        parsed_graphs = hitl_manager.extractor.parsed_graphs
         sentences = [sen for sen in parsed_graphs.keys() if sen != "latest"]
         logging.info("Sentence retrieval successful.")
         return {"sentences": sentences}
@@ -302,7 +303,7 @@ def get_annotated_graphs() -> Dict[str, Any]:
     """
     logging.info("Initiating annotated graph retrieval.")
     try:
-        annotated_graphs = hitl_manager.get_annotated_graphs()
+        annotated_graphs = hitl_manager.extractor.get_annotated_graphs()
         logging.info("Annotated graph retrieval successful.")
         return {"annotated_graphs": annotated_graphs}
     except Exception as e:
@@ -324,7 +325,7 @@ def infer(text_to_classify: TextToParse) -> Dict[str, Any]:
 
     logging.info("Initiating text classification.")
     try:
-        matches_by_text = hitl_manager.extract_triplets_from_text(
+        matches_by_text = hitl_manager.extractor.extract_triplets_from_text(
             text_to_classify.text, convert_to_text=True
         )
         logging.info("Text classification successful.")
@@ -360,7 +361,7 @@ def infer_sentences(sentences: SentencesToInfer) -> Dict[str, Any]:
     try:
         matches_by_text = {}
         for sentence in sentences.sentences:
-            matches = hitl_manager.extract_triplets_from_text(
+            matches = hitl_manager.extractor.extract_triplets_from_text(
                 sentence, convert_to_text=True
             )
             # Add matches to matches_by_text
