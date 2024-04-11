@@ -9,7 +9,7 @@ from typing import Any, Dict, Generator, List, Optional, Tuple
 
 from newpotato.datatypes import Triplet
 from newpotato.extractors.extractor import Extractor
-from newpotato.extractors.graphbrain_extractor import GraphbrainExtractor
+from newpotato.extractors.graph_extractor import GraphBasedExtractor
 
 
 class AnnotatedWordsNotFoundError(Exception):
@@ -44,7 +44,7 @@ class HITLManager:
         self.sentences = {}
         self.text_to_triplets = defaultdict(list)
         self.oracle = None
-        self.extractor = GraphbrainExtractor()
+        self.extractor = GraphBasedExtractor()
         logging.info("HITL manager initialized")
 
     def load_extractor(self, extractor_data):

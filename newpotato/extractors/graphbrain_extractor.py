@@ -240,7 +240,6 @@ class GraphbrainExtractor(Extractor):
         self.classifier = classifier
         self.text_parser = GraphbrainParserClient(parser_url)
         self.spacy_vocab = self.text_parser.get_vocab()
-        self.parsed_graphs = {}
 
     @staticmethod
     def from_json(data: Dict[str, Any]):
@@ -277,9 +276,11 @@ class GraphbrainExtractor(Extractor):
             text (str): The text to parse.
 
         Returns:
-            List[Dict[str, Any]]: The parsed graphs.
+            Generator[Dict[str, Dict[str, Any]]]: The parsed graphs.
         """
-        return self.text_parser.parse(text)
+        graphs = self.text_parser.parse(text)
+        for graph in graphs:
+            yield graph['text'], graph
 
     def get_annotated_graphs_from_classifier(self) -> List[str]:
         """
@@ -404,30 +405,6 @@ class GraphbrainExtractor(Extractor):
         """
         return [tok.text for tok in self.parsed_graphs[text]["spacy_sentence"]]
 
-    def get_graphs(self, text: str) -> List[Dict[str, Any]]:
-        """
-        Get graphs for text, parsing it if necessary
-
-        Args:
-            text (str): the text to get the graphs for
-            graphs (List[Dict[str, Any]]): the graphs corresponding to the text
-        """
-        if text in self.parsed_graphs:
-            return [self.parsed_graphs[text]]
-
-        graphs = self.parse_text(text)
-        for graph in graphs:
-            self.latest = text
-            self.parsed_graphs[graph["text"]] = graph
-            self.parsed_graphs["latest"] = graph
-
-        return graphs
-
-    def get_sentences(self, text: str) -> List[str]:
-        if text in self.parsed_graphs:
-            return text
-        return [graph["text"] for graph in self.get_graphs(text)]
-
     def add_text_to_graphs(self, text: str) -> None:
         """Add the given text to the graphs.
 
@@ -438,13 +415,6 @@ class GraphbrainExtractor(Extractor):
             None
         """
         self.get_graphs(text)
-
-    def is_parsed(self, text: str) -> bool:
-        """
-        Check if the given text is parsed.
-        """
-
-        return text in self.parsed_graphs
 
     def match_rules(self, sen: str) -> List[Dict]:
         """

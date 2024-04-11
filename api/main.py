@@ -1,4 +1,5 @@
 import logging
+import traceback
 from typing import Any, Dict, List, Tuple
 
 from fastapi import FastAPI, HTTPException
@@ -11,7 +12,12 @@ from newpotato.hitl import HITLManager
 app = FastAPI()
 hitl_manager = HITLManager()
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+
+logging.basicConfig(
+    format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    force=True,
+)
 
 
 # Define request and response models
@@ -124,6 +130,7 @@ def parse_text(text_to_parse: TextToParse):
         return {"status": "ok"}
     except Exception as e:
         logging.error(f"Error parsing text: {e}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -138,7 +145,7 @@ def annotate_text(annotation: Annotation) -> Dict[str, Any]:
 
     logging.info("Initiating annotation storage.")
     try:
-        graph = hitl_manager.extractor.get_graphs(annotation.text)[0]
+        graph = hitl_manager.extractor.get_graph(annotation.text)
         triplet = Triplet(annotation.pred, annotation.args, graph)
         mapped_triplet = hitl_manager.extractor.map_triplet(triplet, annotation.text)
         if mapped_triplet is False:
@@ -155,6 +162,7 @@ def annotate_text(annotation: Annotation) -> Dict[str, Any]:
         return {"status": "ok"}
     except Exception as e:
         logging.error(f"Error storing annotation: {e}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -246,7 +254,7 @@ def delete_triplet(annotation: Annotation) -> Dict[str, Any]:
         logging.info(
             f"Annotation: {annotation.text}, {annotation.pred}, {annotation.args}"
         )
-        graph = hitl_manager.extractor.get_graphs(annotation.text)[0]
+        graph = hitl_manager.extractor.get_graph(annotation.text)
         triplet = Triplet(annotation.pred, annotation.args, graph)
         logging.info(f"Deleting triplet: {triplet}")
         hitl_manager.delete_triplet(annotation.text, triplet)
@@ -343,6 +351,7 @@ def infer(text_to_classify: TextToParse) -> Dict[str, Any]:
 
     except Exception as e:
         logging.error(f"Error in text classification: {e}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 

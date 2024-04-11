@@ -160,7 +160,7 @@ class NPTerminalClient:
         console.print("[bold cyan]Parsing text...[/bold cyan]")
         with open(fn) as f:
             for line in tqdm(f):
-                self.hitl.get_graphs(line.strip())
+                self.hitl.extractor.get_graphs(line.strip())
         console.print("[bold cyan]Done![/bold cyan]")
 
     def annotate(self):
