@@ -32,7 +32,7 @@ class Extractor:
     def get_sentences(self, text: str) -> List[str]:
         return [sen for sen, _ in self.get_graphs(text)]
 
-    def get_rules(self, *args, **kwargs):
+    def get_rules(self, text_to_triplets, *args, **kwargs):
         raise NotImplementedError
     
     def is_parsed(self, text):
