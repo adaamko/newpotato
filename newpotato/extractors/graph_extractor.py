@@ -1,3 +1,4 @@
+from collections import Counter
 from typing import Any, Dict, List, Optional, Tuple
 
 from newpotato.datatypes import Triplet
@@ -50,8 +51,19 @@ class GraphBasedExtractor(Extractor):
         return self.parsed_graphs[sen].tokens
 
     def get_rules(self, text_to_triplets):
+        pred_graphs = Counter()
+        arg_graphs = Counter()
         for text, triplets in text_to_triplets.items():
-            pass
+            for triplet in triplets:
+                pred_graphs[triplet.pred_graph] += 1
+                for arg_graph in triplet.arg_graphs:
+                    arg_graphs[arg_graph] += 1
+        self.pred_graphs = pred_graphs
+        self.arg_graphs = arg_graphs
+
+    def print_rules(self):
+        print(f"{self.pred_graphs=}")
+        print(f"{self.arg_graphs=}")
 
     def extract_triplets_from_text(self, text, **kwargs):
         raise NotImplementedError
