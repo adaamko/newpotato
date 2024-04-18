@@ -1,27 +1,13 @@
 import json
 import logging
 import random
-import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Dict, Generator, List, Optional, Tuple
-
+from typing import Any, Dict, Generator, List, Optional
 
 from newpotato.datatypes import Triplet
 from newpotato.extractors.extractor import Extractor
 from newpotato.extractors.graph_extractor import GraphBasedExtractor
-
-
-class AnnotatedWordsNotFoundError(Exception):
-    def __init__(self, words_txt, pattern, sen):
-        message = (
-            f'Words "{words_txt}" (pattern: "{pattern}") not found in sentence "{sen}"'
-        )
-        super().__init__(message)
-
-        self.words_txt = words_txt
-        self.sen = sen
-        self.pattern = pattern
 
 
 @dataclass
@@ -221,59 +207,6 @@ class HITLManager:
             return self.store_triplet(self.latest, triplet, positive)
         logging.info(f"appending to triplets: {text=}, {triplet=}")
         self.text_to_triplets[text].append((triplet, positive))
-
-    def get_toks_from_txt(
-        self, words_txt: str, sen: str, ignore_brackets: bool = False
-    ) -> Tuple[int, ...]:
-        """
-        Map a substring of a sentence to its tokens. Used to parse annotations of triplets
-        provided as plain text strings of the predicate and the arguments
-
-        Args:
-            words_txt (str): the substring of the sentence
-            sen (str): the sentence
-            ignore_brackets (bool): whether to remove brackets from the text before matching (required for ORE annotation)
-
-        Returns:
-            Tuple[int, ...] the tokens of the sentence corresponding to the substring
-        """
-        logging.debug(f"{words_txt=}, {sen=}")
-        if ignore_brackets:
-            pattern = re.escape(re.sub('["()]', "", words_txt))
-        else:
-            pattern = re.escape(words_txt)
-        logging.debug(f"{pattern=}")
-        if pattern[0].isalpha():
-            pattern = r"\b" + pattern
-        if pattern[-1].isalpha():
-            pattern = pattern + r"\b"
-        m = re.search(pattern, sen, re.IGNORECASE)
-
-        if m is None:
-            raise AnnotatedWordsNotFoundError(words_txt, pattern, sen)
-
-        start, end = m.span()
-        logging.debug(f"span: {(start, end)}")
-
-        tok_i, tok_j = None, None
-        tokens = self.get_tokens(sen)
-        logging.debug(f"tokens: {tokens}")
-        logging.debug(f"tok idxs: {[tok.idx for tok in tokens]}")
-        for i, token in enumerate(tokens):
-            if token.idx == start:
-                tok_i = i
-            if token.idx >= end:
-                tok_j = i
-                break
-        if tok_i is None:
-            logging.error(
-                f'left side of annotation "{words_txt}" does not match the left side of any token in sen "{sen}"'
-            )
-            raise Exception()
-        if tok_j is None:
-            tok_j = len(tokens)
-
-        return tuple(range(tok_i, tok_j))
 
     def get_unannotated_sentences(
         self, max_sens: Optional[int] = None, random_order: bool = False

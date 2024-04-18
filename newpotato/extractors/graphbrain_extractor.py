@@ -221,6 +221,7 @@ class GraphbrainMappedTriplet(Triplet):
         self.toks = toks
         self.variables = variables
         self.sen_graph = sen_graph
+        self.mapped = True
 
 
 class GraphbrainExtractor(Extractor):
@@ -268,7 +269,7 @@ class GraphbrainExtractor(Extractor):
 
         return data
 
-    def parse_text(self, text: str) -> List[GraphParse]:
+    def _parse_text(self, text: str) -> List[GraphParse]:
         """
         Parse the given text.
 

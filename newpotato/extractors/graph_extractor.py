@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
 from newpotato.datatypes import Triplet
@@ -13,6 +13,7 @@ class GraphMappedTriplet(Triplet):
         super(GraphMappedTriplet, self).__init__(triplet.pred, triplet.args)
         self.pred_graph = pred_graph
         self.arg_graphs = arg_graphs
+        self.mapped = True
 
 
 class GraphBasedExtractor(Extractor):
@@ -30,7 +31,7 @@ class GraphBasedExtractor(Extractor):
         super(GraphBasedExtractor, self).__init__()
         self.text_parser = GraphParserClient(parser_url)
 
-    def parse_text(self, text: str):
+    def _parse_text(self, text: str):
         """
         Parse the given text.
 
@@ -50,14 +51,23 @@ class GraphBasedExtractor(Extractor):
         """
         return self.parsed_graphs[sen].tokens
 
+    def get_lemmas(self, sen) -> List[str]:
+        """
+        Get the lemmas of the given text.
+        """
+        return [w.lemma for w in self.parsed_graphs[sen].stanza_sen.words]
+
     def get_rules(self, text_to_triplets):
         pred_graphs = Counter()
-        arg_graphs = Counter()
+        arg_graphs = defaultdict(Counter)
         for text, triplets in text_to_triplets.items():
+            # toks = self.get_tokens(text)
+            lemmas = self.get_lemmas(text)
             for triplet in triplets:
                 pred_graphs[triplet.pred_graph] += 1
+                pred_lemmas = tuple(lemmas[i] for i in triplet.pred)
                 for arg_graph in triplet.arg_graphs:
-                    arg_graphs[arg_graph] += 1
+                    arg_graphs[pred_lemmas][arg_graph] += 1
         self.pred_graphs = pred_graphs
         self.arg_graphs = arg_graphs
 
@@ -70,8 +80,17 @@ class GraphBasedExtractor(Extractor):
 
     def map_triplet(self, triplet, sentence, **kwargs):
         graph = self.parsed_graphs[sentence]
-        pred_subgraph = graph.subgraph_from_tok_ids(triplet.pred)
-        arg_subgraphs = [graph.subgraph_from_tok_ids(arg) for arg in triplet.args]
+        pred_subgraph = (
+            graph.subgraph_from_tok_ids(
+                triplet.pred, handle_unconnected="shortest_path"
+            )
+            if triplet.pred is not None
+            else None
+        )
+        arg_subgraphs = [
+            graph.subgraph_from_tok_ids(arg, handle_unconnected="shortest_path")
+            for arg in triplet.args
+        ]
         return GraphMappedTriplet(triplet, pred_subgraph, arg_subgraphs)
 
     def infer_triplets(self, sen: str, **kwargs) -> List[Triplet]:

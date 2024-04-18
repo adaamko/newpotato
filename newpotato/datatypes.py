@@ -12,6 +12,7 @@ class Triplet:
         self.pred = None if pred is None else tuple(int(i) for i in pred)
         self.args = tuple(tuple(int(i) for i in arg) for arg in args)
         self.toks = toks
+        self.mapped = False
 
     @staticmethod
     def from_json(data):

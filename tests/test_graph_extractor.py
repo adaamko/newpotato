@@ -7,7 +7,7 @@ def test_graph_extractor():
     ex = GraphBasedExtractor()
     ex.get_graphs(text)
     toks = ex.get_tokens(text)
-    triplet = Triplet((2,), ((1,), (3,)), toks=toks)
+    triplet = Triplet((1,), ((0,), (2,)), toks=toks)
     mapped_triplet = ex.map_triplet(triplet, text)
     print(f"{mapped_triplet=}")
     text_to_triplets = {text: [mapped_triplet]}

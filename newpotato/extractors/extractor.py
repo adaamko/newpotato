@@ -7,6 +7,7 @@ from newpotato.datatypes import Triplet
 def get_extractor_cls(e_type):
     if e_type == "graphbrain":
         from newpotato.extractors.graphbrain_extractor import GraphbrainExtractor
+
         return GraphbrainExtractor
     else:
         raise ValueError(f"unknown extractor type: {e_type}")
@@ -34,18 +35,26 @@ class Extractor:
 
     def get_rules(self, text_to_triplets, *args, **kwargs):
         raise NotImplementedError
-    
+
     def is_parsed(self, text):
         """
         Check if the given text is parsed.
         """
         return text in self.parsed_graphs
-   
+
     def extract_triplets_from_text(self, text, **kwargs):
         raise NotImplementedError
 
-    def parse_text(self, text, **kwargs):
+    def _parse_text(self, text, **kwargs):
         raise NotImplementedError
+
+    def parse_text(self, text, **kwargs):
+        if text in self.parsed_graphs:
+            yield text, self.parsed_graphs[text]
+        else:
+            for sen, graph in self._parse_text(text):
+                self.parsed_graphs[sen] = graph
+                yield sen, graph
 
     def get_graph(self, sen: str):
         """
@@ -66,19 +75,10 @@ class Extractor:
 
         Args:
             text (str): the text to get the graphs for
-            graphs (Dict[str, Any]): the graphs corresponding to the sentences of the text
+        Returns:
+            Dict[str, Any]: the graphs corresponding to the sentences of the text
         """
-        if text in self.parsed_graphs:
-            return {text: self.parsed_graphs[text]}
-
-        graphs = {}
-        for sen, graph in self.parse_text(text):
-            graphs[sen] = graph
-            self.parsed_graphs[sen] = graph
-            self.latest = sen
-            self.parsed_graphs["latest"] = graph
-
-        return graphs
+        return dict(self.parse_text(text))
 
     def map_triplet(self, triplet, sentence, **kwargs):
         raise NotImplementedError
