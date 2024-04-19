@@ -51,7 +51,7 @@ def main():
     logging.info("training...")
     extractor.get_rules(gold_data)
     
-    # extractor.print_rules()
+    extractor.print_rules()
 
     # evaluation
     logging.info("evaluating...")
