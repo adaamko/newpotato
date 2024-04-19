@@ -1,4 +1,5 @@
 import logging
+from typing import List
 
 
 class Triplet:
@@ -38,12 +39,8 @@ class Triplet:
         return hash((self.pred, self.args))
 
     def to_str(self, toks):
-        pred_phrase = (
-            "" if self.pred is None else "_".join(toks[a] for a in self.pred)
-        )
-        args_str = ", ".join(
-            "_".join(toks[a] for a in phrase) for phrase in self.args
-        )
+        pred_phrase = "" if self.pred is None else "_".join(toks[a] for a in self.pred)
+        args_str = ", ".join("_".join(toks[a] for a in phrase) for phrase in self.args)
         return f"{pred_phrase}({args_str})"
 
     def __str__(self):
@@ -54,3 +51,16 @@ class Triplet:
 
     def __repr__(self):
         return str(self)
+
+
+def triplets_to_str(self, triplets: List[Triplet]) -> List[str]:
+    """
+    Returns human-readable versions of triplets for a sentence
+
+    Args:
+        triplets (List[Triplet]): the triplets to convert
+
+    Returns:
+        List[str]: the human-readable form of the triplet
+    """
+    return [str(triplet) for triplet in triplets]

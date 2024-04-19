@@ -8,13 +8,7 @@ from newpotato.datatypes import Triplet
 
 
 class AnnotatedWordsNotFoundError(Exception):
-    def __init__(self, words_txt, pattern, sen):
-        message = f'Words "{words_txt}" (pattern: "{pattern}") not found in sentence "{sen.text}"'
-        super().__init__(message)
-
-        self.words_txt = words_txt
-        self.sen = sen
-        self.pattern = pattern
+    pass
 
 
 def print_tokens(sentence, extractor, console):
@@ -145,7 +139,9 @@ def get_toks_from_txt(
         Tuple[int, ...] the tokens of the sentence corresponding to the substring
     """
     logging.debug(f"{words_txt=}, {sen.text=}")
-    logging.debug(f"enumerated tokens: {[(i, tok.text) for i, tok in enumerate(sen.tokens)]}")
+    logging.debug(
+        f"enumerated tokens: {[(i, tok.text) for i, tok in enumerate(sen.tokens)]}"
+    )
     if ignore_brackets:
         pattern = re.escape(re.sub('["()]', "", words_txt))
     else:
@@ -158,7 +154,10 @@ def get_toks_from_txt(
     m = re.search(pattern, sen.text, re.IGNORECASE)
 
     if m is None:
-        raise AnnotatedWordsNotFoundError(words_txt, pattern, sen)
+        logging.warning(
+            f'Words "{words_txt}" (pattern: "{pattern}") not found in sentence "{sen.text}"'
+        )
+        raise AnnotatedWordsNotFoundError()
 
     start, end = m.span()
     logging.debug(f"span: {(start, end)}")
@@ -171,10 +170,10 @@ def get_toks_from_txt(
             tok_j = i
             break
     if tok_i is None:
-        logging.error(
-            f'left side of annotation "{words_txt}" does not match the left side of any token in sen "{sen}"'
+        logging.warning(
+            f'left side of annotation "{words_txt}" does not match the left side of any token in sen "{sen.text}"'
         )
-        raise Exception()
+        raise AnnotatedWordsNotFoundError()
     if tok_j is None:
         tok_j = len(sen.tokens)
 

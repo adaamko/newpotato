@@ -139,19 +139,6 @@ class HITLManager:
     def infer_triplets(self, sen: str, **kwargs) -> List[Triplet]:
         return self.extractor.infer_triplets(sen, **kwargs)
 
-    def triplets_to_str(self, triplets: List[Triplet], sen: str) -> List[str]:
-        """
-        Returns human-readable versions of triplets for a sentence
-
-        Args:
-            triplets (List[Triplet]): the triplets to convert
-            sen (str): the sentence that is the source of this triplet
-
-        Returns:
-            List[str]: the human-readable form of the triplet
-        """
-        return [str(triplet) for triplet in triplets]
-
     def get_true_triplets(self) -> Dict[str, List[Triplet]]:
         """
         Get the triplets, return everything except the latest triplets.
