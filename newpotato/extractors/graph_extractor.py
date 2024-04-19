@@ -27,9 +27,11 @@ class GraphBasedExtractor(Extractor):
     def __init__(
         self,
         parser_url: Optional[str] = "http://localhost:7277",
+        default_relation: Optional[str] = None,
     ):
         super(GraphBasedExtractor, self).__init__()
         self.text_parser = GraphParserClient(parser_url)
+        self.default_relation = default_relation
 
     def _parse_text(self, text: str):
         """
@@ -64,8 +66,11 @@ class GraphBasedExtractor(Extractor):
             # toks = self.get_tokens(text)
             lemmas = self.get_lemmas(text)
             for triplet in triplets:
-                pred_graphs[triplet.pred_graph] += 1
-                pred_lemmas = tuple(lemmas[i] for i in triplet.pred)
+                if triplet.pred is not None:
+                    pred_graphs[triplet.pred_graph] += 1
+                    pred_lemmas = tuple(lemmas[i] for i in triplet.pred)
+                else:
+                    pred_lemmas = (self.default_relation,)
                 for arg_graph in triplet.arg_graphs:
                     arg_graphs[pred_lemmas][arg_graph] += 1
         self.pred_graphs = pred_graphs

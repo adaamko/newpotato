@@ -25,8 +25,8 @@ def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-i", "--input_file", default=None, type=str)
     parser.add_argument("-d", "--debug", action="store_true")
-    parser.add_argument("-r", "--relearn", action="store_true")
     parser.add_argument("-e", "--events_file", default=None, type=str)
+    parser.add_argument("-r", "--which_rel", default=None, type=str)
     return parser.parse_args()
 
 
@@ -40,18 +40,18 @@ def main():
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    extractor = GraphBasedExtractor()
+    extractor = GraphBasedExtractor(default_relation=args.which_rel)
     logging.info(f"loading gold data from {args.input_file=}...")
     gold_data = {
         sen: set(triplets)
-        for sen, triplets in load_and_map_fd(args.input_file, extractor)
+        for sen, triplets in load_and_map_fd(args.input_file, extractor, args.which_rel)
     }
     
     # training
     logging.info("training...")
     extractor.get_rules(gold_data)
     
-    extractor.print_rules()
+    # extractor.print_rules()
 
     # evaluation
     logging.info("evaluating...")
