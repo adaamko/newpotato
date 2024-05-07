@@ -8,6 +8,7 @@ from newpotato.extractors.extractor import Extractor
 from newpotato.extractors.graph_parser_client import GraphParserClient
 
 from tuw_nlp.graph.graph import Graph
+from tuw_nlp.graph.utils import GraphFormulaPatternMatcher
 
 
 class GraphMappedTriplet(Triplet):
@@ -67,14 +68,14 @@ class GraphBasedExtractor(Extractor):
         arg_graphs = defaultdict(Counter)
         for text, triplets in text_to_triplets.items():
             # toks = self.get_tokens(text)
-            logging.debug(f'{text=}')
+            logging.debug(f"{text=}")
             graph = self.parsed_graphs[text]
             logging.debug(graph.to_dot())
             lemmas = self.get_lemmas(text)
             for triplet in triplets:
-                logging.debug(f'{triplet=}')
+                logging.debug(f"{triplet=}")
                 if triplet.pred is not None:
-                    logging.debug(f'{triplet.pred_graph=}')
+                    logging.debug(f"{triplet.pred_graph=}")
                     pred_graphs[triplet.pred_graph] += 1
                     pred_lemmas = tuple(lemmas[i] for i in triplet.pred)
                     triplet_toks = set(chain(triplet.pred, *triplet.args))
@@ -83,17 +84,17 @@ class GraphBasedExtractor(Extractor):
                     triplet_toks = set(chain(*triplet.args))
 
                 for arg_graph in triplet.arg_graphs:
-                    logging.debug(f'{arg_graph=}')
+                    logging.debug(f"{arg_graph=}")
                     arg_graphs[pred_lemmas][arg_graph] += 1
 
-                logging.debug(f'{triplet_toks=}')
-                
+                logging.debug(f"{triplet_toks=}")
+
                 triplet_graph = graph.subgraph(
                     triplet_toks, handle_unconnected="shortest_path_infer"
                 )
                 triplet_graphs[triplet_graph] += 1
 
-                logging.debug(f'{triplet_graph=}')
+                logging.debug(f"{triplet_graph=}")
 
                 if triplet.pred is None:
                     inferred_pred_toks = set(
@@ -101,16 +102,26 @@ class GraphBasedExtractor(Extractor):
                         for node in triplet_graph.G.nodes()
                         if node not in triplet_toks
                     )
-                    logging.debug(f'{inferred_pred_toks=}')
+                    logging.debug(f"{inferred_pred_toks=}")
                     inferred_pred_graph = graph.subgraph(
                         inferred_pred_toks, handle_unconnected="shortest_path_infer"
                     )
-                    logging.debug(f'{inferred_pred_graph=}')
+                    logging.debug(f"{inferred_pred_graph=}")
                     pred_graphs[inferred_pred_graph] += 1
 
         self.pred_graphs = pred_graphs
         self.arg_graphs = arg_graphs
         self.triplet_graphs = triplet_graphs
+        
+        patterns = []
+        threshold = 1
+        label = 'LABEL'
+        for pred_graph, freq in self.pred_graphs.most_common():
+            if freq < threshold:
+                break
+            patterns.append(((pred_graph.G,), (), label))
+
+        self.pred_matcher = GraphFormulaPatternMatcher(patterns, converter=None, case_sensitive=False)
 
     def print_rules(self):
         print(f"{self.pred_graphs=}")
@@ -122,23 +133,32 @@ class GraphBasedExtractor(Extractor):
 
     def map_triplet(self, triplet, sentence, **kwargs):
         graph = self.parsed_graphs[sentence]
-        logging.debug(f'mapping triplet to {graph=}')
+        logging.debug(f"mapping triplet to {graph=}")
         pred_subgraph = (
-            graph.subgraph(
-                triplet.pred, handle_unconnected="shortest_path"
-            )
+            graph.subgraph(triplet.pred, handle_unconnected="shortest_path")
             if triplet.pred is not None
             else None
         )
-        
-        logging.debug(f'triplet mapped: {pred_subgraph=}')
+
+        logging.debug(f"triplet mapped: {pred_subgraph=}")
 
         arg_subgraphs = [
             graph.subgraph(arg, handle_unconnected="shortest_path")
             for arg in triplet.args
         ]
-        logging.debug(f'triplet mapped: {arg_subgraphs=}')
+        logging.debug(f"triplet mapped: {arg_subgraphs=}")
         return GraphMappedTriplet(triplet, pred_subgraph, arg_subgraphs)
 
     def infer_triplets(self, sen: str, **kwargs) -> List[Triplet]:
-        raise NotImplementedError
+        triplets = []
+        for _, sen_graph in self.parse_text(sen):
+            for key, i, subgraphs in self.pred_matcher.match(sen_graph.G, return_subgraphs=True):
+                for subgraph in subgraphs:
+                    logging.debug(f'MATCH: {sen=}')
+                    logging.debug(f'MATCH: {subgraph.graph=}')
+                    pred_indices = tuple(idx for idx, token in enumerate(subgraph.graph['tokens']) if token is not None)
+                    triplet = Triplet(pred_indices, ())
+                    mapped_triplet = self.map_triplet(triplet, sen)
+                    triplets.append(mapped_triplet)
+
+        return triplets
