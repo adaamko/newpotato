@@ -133,6 +133,24 @@ def annotate_sentence(selected_sentence: str):
         )
 
 
+def show_sentences(knowledge_graph):
+    st.write("Inferred:")
+    df = pd.DataFrame(
+        {
+            "text": text,
+            "pred": triplet_tuple[0],
+            "args": ",".join(
+                "_".join([str(i) for i in arg]) if arg is not None else "None"
+                for arg in triplet_tuple[1:]
+            ),
+            "annotated": annotated,
+        }
+        for triplet_tuple, matches in knowledge_graph.items()
+        for text, rules_triggered, triplet, annotated in matches
+    )
+    st.data_editor(df, hide_index=True, key="inferred_sentences_viewer")
+
+
 # Enhanced Cytoscape Graph Visualization Function
 def visualize_kg(knowledge_graph):
     elements = []
@@ -368,7 +386,10 @@ def main():
                     {
                         "pred": "_".join([str(i) for i in annotation[0]]),
                         "args": ",".join(
-                            "_".join([str(i) for i in arg]) for arg in annotation[1]
+                            "_".join([str(i) for i in arg])
+                            if arg is not None
+                            else "None"
+                            for arg in annotation[1]
                         ),
                         "triplet": annotation[2],
                         "delete": False,
@@ -488,16 +509,16 @@ def main():
 
                                 for i, m in enumerate(matches):
                                     triplet_tuple = (
-                                        m["REL"],
-                                        m["ARG0"],
-                                        m["ARG1"],
+                                        m.get("REL"),
+                                        m.get("ARG0"),
+                                        m.get("ARG1"),
                                     )
                                     triplets_to_sentence_and_rule[triplet_tuple].append(
                                         (text, rules_triggered, triplets[i], annotated)
                                     )
-                            st.session_state["knowledge_graph"] = (
-                                triplets_to_sentence_and_rule
-                            )
+                            st.session_state[
+                                "knowledge_graph"
+                            ] = triplets_to_sentence_and_rule
 
                         else:
                             st.write("No matches found.")
@@ -533,7 +554,8 @@ def main():
             # In the knowledge graph, the nodes are the ARG0, ARG1, the edges are the REL
             # The edges will be selectable, and when selected, the sentences and rules that triggered the edge will be displayed
 
-            visualize_kg(st.session_state["knowledge_graph"])
+            # visualize_kg(st.session_state["knowledge_graph"])
+            show_sentences(st.session_state["knowledge_graph"])
 
     with load:
         data = upload_json_file()

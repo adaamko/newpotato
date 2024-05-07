@@ -1,4 +1,5 @@
 import logging
+import traceback
 from typing import Any, Dict, List, Tuple
 
 from fastapi import FastAPI, HTTPException
@@ -155,6 +156,7 @@ def annotate_text(annotation: Annotation) -> Dict[str, Any]:
         return {"status": "ok"}
     except Exception as e:
         logging.error(f"Error storing annotation: {e}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
