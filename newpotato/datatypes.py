@@ -11,7 +11,9 @@ class Triplet:
     def __init__(self, pred, args, toks=None):
         logging.debug(f"triple init got: pred: {pred}, args: {args}")
         self.pred = None if pred is None else tuple(int(i) for i in pred)
-        self.args = tuple(tuple(int(i) for i in arg) for arg in args)
+        self.args = tuple(
+            tuple(int(i) for i in arg) if arg is not None else None for arg in args
+        )
         self.toks = toks
         self.mapped = False
 
@@ -40,7 +42,7 @@ class Triplet:
 
     def to_str(self, toks):
         pred_phrase = "" if self.pred is None else "_".join(toks[a] for a in self.pred)
-        args_str = ", ".join("_".join(toks[a] for a in phrase) for phrase in self.args)
+        args_str = ", ".join("_".join(toks[a] for a in phrase) if phrase is not None else 'None' for phrase in self.args)
         return f"{pred_phrase}({args_str})"
 
     def __str__(self):

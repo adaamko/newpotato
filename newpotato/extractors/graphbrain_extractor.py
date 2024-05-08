@@ -523,16 +523,19 @@ class GraphbrainExtractor(Extractor):
 
         mapped_args = []
         for i in range(len(triplet.args)):
-            arg_edge, relevant_toks, exact_match = toks2subedge(
-                edge, triplet.args[i], all_toks, words_to_i
-            )
-            if not exact_match and strict:
-                logging.warning(
-                    f"cannot map arg {triplet.args[i]} to subedge of {edge} (closest: {arg_edge}"
+            if triplet.args[i] is not None and len(triplet.args[i]) > 0:
+                arg_edge, relevant_toks, exact_match = toks2subedge(
+                    edge, triplet.args[i], all_toks, words_to_i
                 )
-                raise UnmappableTripletError()
-            variables[f"ARG{i}"] = arg_edge
-            mapped_args.append(tuple(sorted(relevant_toks)))
+                if not exact_match and strict:
+                    logging.warning(
+                        f"cannot map arg {triplet.args[i]} to subedge of {edge} (closest: {arg_edge}"
+                    )
+                    raise UnmappableTripletError()
+                variables[f"ARG{i}"] = arg_edge
+                mapped_args.append(tuple(sorted(relevant_toks)))
+            else:
+                mapped_args.append(None)
 
         return mapped_pred, mapped_args, variables
 
