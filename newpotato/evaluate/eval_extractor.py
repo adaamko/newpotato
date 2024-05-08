@@ -43,7 +43,7 @@ def main():
     extractor = GraphBasedExtractor(default_relation=args.which_rel)
     logging.info(f"loading gold data from {args.input_file=}...")
     gold_data = {
-        sen: set(triplets)
+        sen: [(triplet, True) for triplet in triplets]
         for sen, triplets in load_and_map_fd(args.input_file, extractor, args.which_rel)
     }
     

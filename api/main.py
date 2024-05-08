@@ -403,4 +403,5 @@ def infer_sentences(sentences: SentencesToInfer) -> Dict[str, Any]:
 
     except Exception as e:
         logging.error(f"Error in sentence classification: {e}")
+        logging.error(f'\n{traceback.format_exc()}')
         raise HTTPException(status_code=500, detail=str(e))

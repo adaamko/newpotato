@@ -64,7 +64,7 @@ class Evaluator:
     def write_events(self, stream):
         for sen, golds, preds in self.get_events():
             e_type = self.get_event_type(golds, preds)
-            logging.debug("golds: " + ", ".join(f"{(t.pred, t.args)}" for t in golds))
+            logging.debug("golds: " + ", ".join(f"{(t.pred, t.args)}" for t, positive in golds))
             logging.debug("preds: " + ", ".join(f"{(t.pred, t.args)}" for t in preds))
             golds_txt = " ".join(triplets_to_str(golds))
             preds_txt = " ".join(triplets_to_str(preds))

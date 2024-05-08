@@ -62,7 +62,7 @@ class GraphBasedExtractor(Extractor):
         """
         return [w.lemma for w in self.parsed_graphs[sen].stanza_sen.words]
 
-    def get_rules(self, text_to_triplets):
+    def get_rules(self, text_to_triplets, **kwargs):
         pred_graphs = Counter()
         triplet_graphs = Counter()
         arg_graphs = defaultdict(Counter)
@@ -72,7 +72,7 @@ class GraphBasedExtractor(Extractor):
             graph = self.parsed_graphs[text]
             logging.debug(graph.to_dot())
             lemmas = self.get_lemmas(text)
-            for triplet in triplets:
+            for triplet, positive in triplets:
                 logging.debug(f"{triplet=}")
                 if triplet.pred is not None:
                     logging.debug(f"{triplet.pred_graph=}")
@@ -112,16 +112,19 @@ class GraphBasedExtractor(Extractor):
         self.pred_graphs = pred_graphs
         self.arg_graphs = arg_graphs
         self.triplet_graphs = triplet_graphs
-        
+
         patterns = []
         threshold = 1
-        label = 'LABEL'
+        label = "LABEL"
         for pred_graph, freq in self.pred_graphs.most_common():
             if freq < threshold:
                 break
             patterns.append(((pred_graph.G,), (), label))
 
-        self.pred_matcher = GraphFormulaPatternMatcher(patterns, converter=None, case_sensitive=False)
+        self.pred_matcher = GraphFormulaPatternMatcher(
+            patterns, converter=None, case_sensitive=False
+        )
+        return [graph for graph, freq in self.pred_graphs.most_common(20)]
 
     def print_rules(self):
         print(f"{self.pred_graphs=}")
@@ -129,7 +132,21 @@ class GraphBasedExtractor(Extractor):
         print(f"{self.triplet_graphs=}")
 
     def extract_triplets_from_text(self, text, **kwargs):
-        raise NotImplementedError
+        matches_by_text = {}
+        for sen, triplets_and_subgraphs in self._infer_triplets(text):
+            matches_by_text[sen] = {
+                "matches": [],
+                "rules_triggered": [],
+                "triplets": [],
+            }
+            for triplet, subgraph in triplets_and_subgraphs:
+                matches_by_text[sen]["rules_triggered"].append(subgraph)
+                matches_by_text[sen]["triplets"].append(triplet)
+                matches_by_text[sen]["matches"].append(
+                    {"REL": None, "ARG0": None, "ARG1": None}
+                )
+
+        return matches_by_text
 
     def map_triplet(self, triplet, sentence, **kwargs):
         graph = self.parsed_graphs[sentence]
@@ -144,21 +161,38 @@ class GraphBasedExtractor(Extractor):
 
         arg_subgraphs = [
             graph.subgraph(arg, handle_unconnected="shortest_path")
+            if len(arg) > 0
+            else None
             for arg in triplet.args
         ]
         logging.debug(f"triplet mapped: {arg_subgraphs=}")
         return GraphMappedTriplet(triplet, pred_subgraph, arg_subgraphs)
 
-    def infer_triplets(self, sen: str, **kwargs) -> List[Triplet]:
-        triplets = []
-        for _, sen_graph in self.parse_text(sen):
-            for key, i, subgraphs in self.pred_matcher.match(sen_graph.G, return_subgraphs=True):
+    def _infer_triplets(self, text: str):
+        for sen, sen_graph in self.parse_text(text):
+            triplets_and_subgraphs = []
+            for key, i, subgraphs in self.pred_matcher.match(
+                sen_graph.G, return_subgraphs=True
+            ):
                 for subgraph in subgraphs:
-                    logging.debug(f'MATCH: {sen=}')
-                    logging.debug(f'MATCH: {subgraph.graph=}')
-                    pred_indices = tuple(idx for idx, token in enumerate(subgraph.graph['tokens']) if token is not None)
+                    logging.debug(f"MATCH: {sen=}")
+                    logging.debug(f"MATCH: {subgraph.graph=}")
+                    pred_indices = tuple(
+                        idx
+                        for idx, token in enumerate(subgraph.graph["tokens"])
+                        if token is not None
+                    )
                     triplet = Triplet(pred_indices, ())
                     mapped_triplet = self.map_triplet(triplet, sen)
-                    triplets.append(mapped_triplet)
+                    triplets_and_subgraphs.append((mapped_triplet, subgraph))
+            yield sen, triplets_and_subgraphs
 
+    def infer_triplets(self, text: str, **kwargs) -> List[Triplet]:
+        triplets = sorted(
+            set(
+                triplet
+                for sen, triplets_and_subgraphs in self._infer_triplets(text)
+                for triplet, _ in triplets_and_subgraphs
+            )
+        )
         return triplets
