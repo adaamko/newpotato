@@ -53,6 +53,18 @@ def delete_annotation(text: str, pred: tuple[int, ...], args: list[tuple[int, ..
     )
 
 
+def parse_text(text: str, doc_id: str = None):
+    """Parse text.
+
+    Args:
+        text (str): Text to parse.
+
+    Returns:
+        dict: Parsed text.
+    """
+    return api_request("POST", "parse", payload={"text": text, "doc_id": doc_id})
+
+
 def fetch_sentences():
     """Fetch sentences from the API.
 
@@ -60,6 +72,15 @@ def fetch_sentences():
         list: List of sentences.
     """
     return api_request("GET", "sentences")["sentences"]
+
+
+def fetch_documents():
+    """Fetch documents from the API.
+
+    Returns:
+        list: List of documents.
+    """
+    return api_request("GET", "documents")["documents"]
 
 
 def fetch_tokens(sentence: str):
@@ -144,8 +165,11 @@ def init_session_states():
     if "train_classifier" not in st.session_state:
         st.session_state.train_classifier = True
     if "sentences" not in st.session_state:
-        st.session_state["sentences"] = []
-        st.session_state["sentences_data"] = {}
+        st.session_state.sentences = fetch_sentences()
+        st.session_state["sentences_data"] = {
+            sen: {"text": sen, "annotations": []}
+            for sen in st.session_state["sentences"]
+        }
     if "knowledge_graph" not in st.session_state:
         st.session_state["knowledge_graph"] = None
     if "rules" not in st.session_state:

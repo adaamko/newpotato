@@ -167,8 +167,9 @@ class HITLManager:
                 self.latest is not None
             ), "no parsed graphs stored, can't use `latest`"
             return self.delete_triplet(self.latest, triplet)
-        assert self.is_parsed(text), f"unparsed text: {text}"
+        # assert self.is_parsed(text), f"unparsed text: {text}"
         logging.info(f"deleting from triplets: {text=}, {triplet=}")
+        logging.info(self.text_to_triplets[text])
         self.text_to_triplets[text].remove((triplet, True))
 
     def store_triplet(
