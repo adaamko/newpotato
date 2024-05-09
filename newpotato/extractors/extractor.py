@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 
 from newpotato.datatypes import Triplet
@@ -23,6 +23,7 @@ class Extractor:
 
     def __init__(self):
         self.parsed_graphs = {}
+        self.doc_ids = {}
 
     def to_json(self) -> Dict[str, Any]:
         raise NotImplementedError
@@ -56,6 +57,11 @@ class Extractor:
                 self.parsed_graphs[sen] = graph
                 yield sen, graph
 
+    def get_doc_ids(self, sen: str):
+        if not self.is_parsed(sen):
+            raise ValueError("get_doc_ids can only be called for parsed sentences")
+        return self.doc_ids[sen]
+
     def get_graph(self, sen: str):
         """
         Get graph for sentence that is already parsed
@@ -69,7 +75,7 @@ class Extractor:
 
         return self.parsed_graphs[sen]
 
-    def get_graphs(self, text: str) -> List:
+    def get_graphs(self, text: str, doc_ids: Set[int]) -> List:
         """
         Get graphs for text, parsing it if necessary
 
@@ -78,7 +84,11 @@ class Extractor:
         Returns:
             Dict[str, Any]: the graphs corresponding to the sentences of the text
         """
-        return dict(self.parse_text(text))
+        graphs = {}
+        for sen, graph in self.parse_text(text):
+            graphs[sen] = graph
+            self.doc_ids[sen] |= doc_ids
+        return graphs
 
     def map_triplet(self, triplet, sentence, **kwargs):
         raise NotImplementedError
