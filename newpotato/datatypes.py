@@ -41,11 +41,9 @@ class Triplet:
         return hash((self.pred, self.args))
 
     def to_str(self, toks):
-        pred_phrase = (
-            "" if self.pred is None else "_".join(toks.tokens[a] for a in self.pred)
-        )
+        pred_phrase = "" if self.pred is None else "_".join(toks[a] for a in self.pred)
         args_str = ", ".join(
-            "_".join(toks.tokens[a] for a in phrase) if phrase is not None else "None"
+            "_".join(toks[a] for a in phrase) if phrase is not None else "None"
             for phrase in self.args
         )
         return f"{pred_phrase}({args_str})"

@@ -13,7 +13,7 @@ from tuw_nlp.graph.utils import GraphFormulaPatternMatcher
 
 class GraphMappedTriplet(Triplet):
     def __init__(self, triplet: Triplet, pred_graph: Graph, arg_graphs: Tuple[Graph]):
-        super(GraphMappedTriplet, self).__init__(triplet.pred, triplet.args)
+        super(GraphMappedTriplet, self).__init__(triplet.pred, triplet.args, toks=triplet.toks)
         self.pred_graph = pred_graph
         self.arg_graphs = arg_graphs
         self.mapped = True
@@ -150,6 +150,7 @@ class GraphBasedExtractor(Extractor):
 
     def map_triplet(self, triplet, sentence, **kwargs):
         graph = self.parsed_graphs[sentence]
+        print(f'mapping triplet: {triplet.pred=}, {triplet.args=}')
         logging.debug(f"mapping triplet to {graph=}")
         pred_subgraph = (
             graph.subgraph(triplet.pred, handle_unconnected="shortest_path")

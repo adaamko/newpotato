@@ -260,10 +260,11 @@ def delete_triplet(annotation: Annotation) -> Dict[str, Any]:
         logging.info(
             f"Annotation: {annotation.text}, {annotation.pred}, {annotation.args}"
         )
-        graph = hitl_manager.extractor.get_graph(annotation.text)
-        triplet = Triplet(annotation.pred, annotation.args, graph)
+        toks = hitl_manager.extractor.get_tokens(annotation.text)
+        triplet = Triplet(annotation.pred, annotation.args, toks=toks)
+        mapped_triplet = hitl_manager.extractor.map_triplet(triplet, annotation.text)
         logging.info(f"Deleting triplet: {triplet}")
-        hitl_manager.delete_triplet(annotation.text, triplet)
+        hitl_manager.delete_triplet(annotation.text, mapped_triplet)
         logging.info("Triplet deletion successful.")
         return {"status": "ok"}
     except Exception as e:
