@@ -262,7 +262,8 @@ def main():
                             pred = tuple(pred)
 
                             if not triplet[1].split(",")[0].strip():
-                                args = [None, None]
+                                # Empty tuples
+                                args = [(), ()]
                             else:
                                 args = [
                                     tuple(int(i) for i in arg.split("_"))
