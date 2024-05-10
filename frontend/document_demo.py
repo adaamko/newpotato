@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from datetime import datetime
 
 import pandas as pd
@@ -8,6 +9,8 @@ from utils import (
     add_annotation,
     delete_annotation,
     fetch_documents,
+    fetch_inference_for_sentences,
+    fetch_rules,
     fetch_sentences,
     fetch_tokens,
     fetch_triplets,
@@ -97,6 +100,24 @@ def annotate_sentence(selected_sentence: str):
                 "added": False,
             }
         ]
+
+
+def show_documents(docs_inference):
+    st.write("Inferred:")
+    documents = fetch_documents()
+    df = pd.DataFrame(
+        {
+            "Document ID": i,
+            "Document Text": " ".join(documents[i]),
+            # "Rules Triggered": "; ".join([inference["rules_triggered"] for inference in infs]),
+            # "Matches": "; ".join([str(inference["matches"]) for inference in infs]),
+            # "Triplets": "; ".join([str(inference["triplets"]) for inference in infs]),
+            # "Senstences": "; ".join([inference["text"] for inference in infs]),
+        }
+        for i, infs in docs_inference.items()
+    )
+
+    st.data_editor(df, hide_index=True, key="inference_data_editor")
 
 
 def upload_text_file():
@@ -265,6 +286,95 @@ def main():
                             else:
                                 st.error("Could not delete the annotation")
                     st.rerun()
+
+    with inference:
+        if st.session_state.train_classifier:
+            st.error("!!The classifier is out of date. Please retrain it.")
+
+            if st.button("Train Classifier"):
+                st.session_state.rules = fetch_rules()
+                if not st.session_state.rules:
+                    st.error("No rules found, please annotate some sentences first.")
+                else:
+                    st.session_state.train_classifier = False
+                    st.rerun()
+
+        else:
+            documents = fetch_documents()
+
+            with st.expander("Documents to classify"):
+                triplets_by_doc = {}
+
+                for i, doc in enumerate(documents):
+                    if i not in triplets_by_doc:
+                        triplets_by_doc[i] = []
+                    for sen in doc:
+                        triplets_by_sen = fetch_triplets(sen)
+                        if triplets_by_sen:
+                            for triplet in triplets_by_sen:
+                                triplets_by_doc[i].append(triplet[2])
+
+                documents_df = pd.DataFrame(
+                    {
+                        "Document ID": i,
+                        "Document Text": " ".join(documents[i]),
+                        "Annotations": " ".join([triplet for triplet in doc]),
+                        "Selected": False,
+                    }
+                    for i, doc in triplets_by_doc.items()
+                )
+
+                edited_documents_df = st.data_editor(
+                    documents_df, hide_index=True, key="documents_data_editor"
+                )
+
+                selected_documents = edited_documents_df[
+                    edited_documents_df["Selected"] == True
+                ]
+
+                all_or_selected = st.radio(
+                    "Classify all documents or selected documents?", ("All", "Selected")
+                )
+
+                if st.button("Classify"):
+                    docs_inference = defaultdict(list)
+                    documents = fetch_documents()
+
+                    for i, document in enumerate(documents):
+                        text_to_matches = fetch_inference_for_sentences(document)
+                        if text_to_matches:
+                            for text, data in text_to_matches.items():
+                                rules_triggered = data["rules_triggered"]
+                                matches = data["matches"]
+                                triplets = data["triplets"]
+                                if rules_triggered:
+                                    docs_inference[i].append(
+                                        {
+                                            "text": text,
+                                            "rules_triggered": rules_triggered,
+                                            "matches": [
+                                                (
+                                                    m.get("REL"),
+                                                    m.get("ARG0"),
+                                                    m.get("ARG1"),
+                                                )
+                                                for m in matches
+                                            ],
+                                            "triplets": triplets,
+                                        }
+                                    )
+
+                    if all_or_selected == "All":
+                        show_documents(docs_inference)
+                    else:
+                        selected_doc_ids = selected_documents["Document ID"].values
+                        docs_inference = {
+                            i: docs_inference[i]
+                            for i in selected_doc_ids
+                            if docs_inference.get(i)
+                        }
+
+                        show_documents(docs_inference)
 
 
 if __name__ == "__main__":
