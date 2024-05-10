@@ -222,6 +222,29 @@ def get_triplets(text: str) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/triplets/all_by_sen")
+def get_all_triplets_by_sen() -> Dict[str, Any]:
+    """Retrieves all annotated triplets.
+
+    Returns:
+        Dict[str, Any]: Dictionary containing annotated triplets.
+    """
+    logging.info("Initiating all annotated triplets retrieval.")
+    try:
+        sen_to_triplets = hitl_manager.get_true_triplets()
+        triplets_by_sen = {}
+        for text in sen_to_triplets:
+            triplets_by_sen[text] = []
+            for triplet in sen_to_triplets[text]:
+                triplets_by_sen[text].append((triplet.pred, triplet.args, str(triplet), text))
+        logging.info("All annotated triplets by sen retrieval successful.")
+        return {"triplets_by_sen": triplets_by_sen}
+    except Exception as e:
+        logging.error(f"Error retrieving all annotated triplets: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/triplets/all")
 def get_all_triplets() -> Dict[str, Any]:
     """Retrieves all annotated triplets.

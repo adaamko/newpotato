@@ -14,6 +14,7 @@ from utils import (
     fetch_sentences,
     fetch_tokens,
     fetch_triplets,
+    fetch_all_triplets_by_sen,
     init_session_states,
     parse_text,
 )
@@ -223,9 +224,10 @@ def main():
 
             current_annotations = []
 
+            triplets_by_sen = fetch_all_triplets_by_sen()
             for sen in sentences:
                 current_annotations.extend(
-                    [(triplet, sen) for triplet in fetch_triplets(sen)]
+                    [(triplet, sen) for triplet in triplets_by_sen.get(sen, [])]
                 )
 
             if current_annotations:
@@ -305,12 +307,14 @@ def main():
 
             with st.expander("Documents to classify"):
                 triplets_by_doc = {}
+                
+                all_triplets_by_sen = fetch_all_triplets_by_sen()
 
                 for i, doc in enumerate(documents):
                     if i not in triplets_by_doc:
                         triplets_by_doc[i] = []
                     for sen in doc:
-                        triplets_by_sen = fetch_triplets(sen)
+                        triplets_by_sen = all_triplets_by_sen.get(sen)
                         if triplets_by_sen:
                             for triplet in triplets_by_sen:
                                 triplets_by_doc[i].append(triplet[2])

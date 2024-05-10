@@ -116,6 +116,15 @@ def fetch_all_triplets():
     return api_request("GET", "triplets/all")["triplets"]
 
 
+def fetch_all_triplets_by_sen():
+    """Fetch all triplets from the API.
+
+    Returns:
+        list: List of triplets.
+    """
+    return api_request("GET", "triplets/all_by_sen")["triplets_by_sen"]
+
+
 def fetch_rules(learn: bool = True):
     """Fetch rules from the API.
 
