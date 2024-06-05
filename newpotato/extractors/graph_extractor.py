@@ -1,23 +1,14 @@
 import logging
 from collections import Counter, defaultdict
 from itertools import chain
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from newpotato.datatypes import Triplet
+from newpotato.datatypes import GraphMappedTriplet, Triplet
 from newpotato.extractors.extractor import Extractor
 from newpotato.extractors.graph_parser_client import GraphParserClient
 
-from tuw_nlp.graph.graph import Graph
 from tuw_nlp.graph.ud_graph import UDGraph
 from tuw_nlp.graph.utils import GraphFormulaPatternMatcher
-
-
-class GraphMappedTriplet(Triplet):
-    def __init__(self, triplet: Triplet, pred_graph: Graph, arg_graphs: Tuple[Graph]):
-        super(GraphMappedTriplet, self).__init__(triplet.pred, triplet.args, toks=triplet.toks)
-        self.pred_graph = pred_graph
-        self.arg_graphs = arg_graphs
-        self.mapped = True
 
 
 class GraphBasedExtractor(Extractor):
@@ -30,16 +21,17 @@ class GraphBasedExtractor(Extractor):
             text: UDGraph.from_json(graph_dict)
             for text, graph_dict in data["parsed_graphs"].items()
         }
-        
+
         return extractor
 
     def to_json(self) -> Dict[str, Any]:
+        # TODO learned rules are not yet saved
         data = {
             "extractor_type": "graph",
             "parsed_graphs": {
                 text: graph.to_json() for text, graph in self.parsed_graphs.items()
             },
-            "parser_params": self.text_parser.get_params()
+            "parser_params": self.text_parser.get_params(),
         }
 
         return data
@@ -174,7 +166,7 @@ class GraphBasedExtractor(Extractor):
 
     def map_triplet(self, triplet, sentence, **kwargs):
         graph = self.parsed_graphs[sentence]
-        print(f'mapping triplet: {triplet.pred=}, {triplet.args=}')
+        print(f"mapping triplet: {triplet.pred=}, {triplet.args=}")
         logging.debug(f"mapping triplet to {graph=}")
         pred_subgraph = (
             graph.subgraph(triplet.pred, handle_unconnected="shortest_path")
@@ -202,14 +194,15 @@ class GraphBasedExtractor(Extractor):
                 for subgraph in subgraphs:
                     logging.debug(f"MATCH: {sen=}")
                     logging.debug(f"MATCH: {subgraph.graph=}")
+                    ud_subgraph = sen_graph.subgraph(subgraph.nodes)
                     pred_indices = tuple(
                         idx
-                        for idx, token in enumerate(subgraph.graph["tokens"])
+                        for idx, token in enumerate(ud_subgraph.tokens)
                         if token is not None
                     )
                     triplet = Triplet(pred_indices, ())
                     mapped_triplet = self.map_triplet(triplet, sen)
-                    triplets_and_subgraphs.append((mapped_triplet, subgraph))
+                    triplets_and_subgraphs.append((mapped_triplet, ud_subgraph))
             yield sen, triplets_and_subgraphs
 
     def infer_triplets(self, text: str, **kwargs) -> List[Triplet]:

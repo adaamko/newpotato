@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from newpotato.evaluate.eval_hitl import HITLEvaluator
 from newpotato.hitl import HITLManager
-from newpotato.utils import get_triplets_from_user
+from newpotato.utils import get_triplets_from_user, print_tokens
 
 console = Console()
 
@@ -64,7 +64,7 @@ class NPTerminalClient:
             for triplet in self.hitl.infer_triplets(sen):
                 triplet_str = str(triplet)
                 console.print("[bold yellow]How about this?[/bold yellow]")
-                console.print(f"[bold yellow]{sen}[/bold yellow]")
+                print_tokens(sen, self.hitl.extractor, console)
                 console.print(f"[bold yellow]{triplet_str}[/bold yellow]")
                 choice_str = None
                 while choice_str not in ("c", "i"):
@@ -175,7 +175,7 @@ class NPTerminalClient:
             else:
                 cands = [
                     sen
-                    for sen in self.hitl.parsed_graphs
+                    for sen in self.hitl.extractor.parsed_graphs
                     if sen.lower().startswith(query)
                 ]
                 if len(cands) > 20:
