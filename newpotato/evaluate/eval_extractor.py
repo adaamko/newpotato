@@ -2,6 +2,8 @@ import argparse
 import logging
 import sys
 
+from rich.console import Console
+
 from newpotato.datasets.food_disease import load_and_map_fd
 from newpotato.extractors.graph_extractor import GraphBasedExtractor
 from newpotato.evaluate.evaluate import Evaluator
@@ -40,6 +42,7 @@ def main():
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
+    console = Console()
     extractor = GraphBasedExtractor(default_relation=args.which_rel)
     logging.info(f"loading gold data from {args.input_file=}...")
     gold_data = {
@@ -51,7 +54,7 @@ def main():
     logging.info("training...")
     extractor.get_rules(gold_data)
     
-    extractor.print_rules()
+    extractor.print_rules(console)
 
     # evaluation
     logging.info("evaluating...")

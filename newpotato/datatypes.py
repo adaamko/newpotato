@@ -58,7 +58,7 @@ class Triplet:
         return str(self)
 
 
-def triplets_to_str(self, triplets: List[Triplet]) -> List[str]:
+def triplets_to_str(triplets: List[Triplet]) -> List[str]:
     """
     Returns human-readable versions of triplets for a sentence
 
