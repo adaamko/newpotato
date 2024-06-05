@@ -7,7 +7,6 @@ from typing import Any, Dict, Generator, List, Optional
 
 from newpotato.datatypes import Triplet
 from newpotato.extractors.extractor import Extractor
-from newpotato.extractors.graph_extractor import GraphBasedExtractor
 
 
 @dataclass
@@ -25,12 +24,25 @@ class HITLManager:
         extractor (Extractor): The extractor that uses classifiers to extract triplets from graphs.
     """
 
-    def __init__(self):
+    def __init__(self, extractor_type):
         self.latest = None
         self.text_to_triplets = defaultdict(list)
         self.oracle = None
-        self.extractor = GraphBasedExtractor()
+        self.extractor_type = extractor_type
+        self.init_extractor()
         logging.info("HITL manager initialized")
+
+    def init_extractor(self):
+        if self.extractor_type == "ud":
+            from newpotato.extractors.graph_extractor import GraphBasedExtractor
+
+            self.extractor = GraphBasedExtractor()
+        elif self.extractor_type == "graphbrain":
+            from newpotato.extractors.graphbrain_extractor import GraphbrainExtractor
+
+            self.extractor = GraphbrainExtractor()
+        else:
+            raise ValueError(f"unsupported extractor type: {self.extractor_type}")
 
     def load_extractor(self, extractor_data):
         self.extractor = Extractor.from_json(extractor_data)

@@ -17,7 +17,7 @@ class NPTerminalClient:
     def __init__(self, args):
         if args.load_state is None:
             console.print("no state file provided, initializing new HITL")
-            self.hitl = HITLManager()
+            self.hitl = HITLManager(args.extractor_type)
         else:
             console.print(f"loading HITL state from {args.load_state}")
             self.hitl = HITLManager.load(args.load_state, args.oracle)
@@ -80,16 +80,22 @@ class NPTerminalClient:
             console.print(
                 "[bold green]Classifying a sentence, please provide one:[/bold green]"
             )
-            sen = input("> ")
+            text = input("> ")
 
-            matches = self.hitl.match_rules(sen)
+            matches_by_text = self.hitl.extractor.extract_triplets_from_text(text)
 
-            if not matches:
-                console.print("[bold red]No matches found[/bold red]")
-            else:
-                console.print("[bold green]Matches:[/bold green]")
-                for match in matches:
-                    console.print(match)
+            console.print("[bold green]Triplets:[/bold green]")
+            table = Table(show_header=True, header_style="bold magenta")
+            table.add_column("Sentence")
+            table.add_column("Triplets")
+            table.add_column("Rules triggered")
+            for sen, match_dict in matches_by_text.items():
+                table.add_row(
+                    sen,
+                    ", ".join(str(t) for t in match_dict["triplets"]),
+                    ", ".join(str(r) for r in match_dict["rules_triggered"]),
+                )
+            console.print(table)
 
     def print_status(self):
         status = self.hitl.get_status()
@@ -136,8 +142,9 @@ class NPTerminalClient:
         table = Table(show_header=True, header_style="bold magenta")
         table.add_column("Sentence")
         table.add_column("Graph")
-        for sen, graph in self.hitl.parsed_graphs.items():
-            table.add_row(sen, str(graph["main_edge"]))
+        for sen, graph in self.hitl.extractor.parsed_graphs.items():
+            # table.add_row(sen, str(graph["main_edge"]))
+            table.add_row(sen, str(graph))
         console.print(table)
 
     def _upload_file(self, fn):
@@ -270,6 +277,7 @@ def get_args():
     parser.add_argument("-o", "--oracle", action="store_true")
     parser.add_argument("-l", "--load_state", default=None, type=str)
     parser.add_argument("-u", "--upload_file", default=None, type=str)
+    parser.add_argument("-x", "--extractor_type", default='ud', type=str)
     return parser.parse_args()
 
 
