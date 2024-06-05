@@ -1,11 +1,15 @@
 from collections import defaultdict
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List
 
 from newpotato.datatypes import Triplet
 
 
 def get_extractor_cls(e_type):
-    if e_type == "graphbrain":
+    if e_type == "graph":
+        from newpotato.extractors.graph_extractor import GraphBasedExtractor
+
+        return GraphBasedExtractor
+    elif e_type == "graphbrain":
         from newpotato.extractors.graphbrain_extractor import GraphbrainExtractor
 
         return GraphbrainExtractor
@@ -24,6 +28,10 @@ class Extractor:
     def __init__(self):
         self.parsed_graphs = {}
         self.doc_ids = defaultdict(set)
+        self._is_trained = False
+
+    def is_trained(self):
+        return self._is_trained
 
     def to_json(self) -> Dict[str, Any]:
         raise NotImplementedError
@@ -102,4 +110,7 @@ class Extractor:
         raise NotImplementedError
 
     def infer_triplets(self, sen: str, **kwargs) -> List[Triplet]:
+        raise NotImplementedError
+
+    def get_n_rules(self) -> int:
         raise NotImplementedError

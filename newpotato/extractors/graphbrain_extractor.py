@@ -255,7 +255,7 @@ class GraphbrainExtractor(Extractor):
         }
         return extractor
 
-    def to_json(self) -> Dict[str, List]:
+    def to_json(self) -> Dict[str, Any]:
         data = {
             "extractor_type": "graphbrain",
             "parsed_graphs": {
@@ -282,6 +282,9 @@ class GraphbrainExtractor(Extractor):
         graphs = self.text_parser.parse(text)
         for graph in graphs:
             yield graph['text'], graph
+
+    def is_trained(self):
+        return self.classifier is not None
 
     def get_annotated_graphs_from_classifier(self) -> List[str]:
         """

@@ -8,6 +8,7 @@ from newpotato.extractors.extractor import Extractor
 from newpotato.extractors.graph_parser_client import GraphParserClient
 
 from tuw_nlp.graph.graph import Graph
+from tuw_nlp.graph.ud_graph import UDGraph
 from tuw_nlp.graph.utils import GraphFormulaPatternMatcher
 
 
@@ -22,10 +23,26 @@ class GraphMappedTriplet(Triplet):
 class GraphBasedExtractor(Extractor):
     @staticmethod
     def from_json(data: Dict[str, Any]):
-        raise NotImplementedError
+        extractor = GraphBasedExtractor()
+        extractor.text_parser.check_params(data["parser_params"])
+
+        extractor.parsed_graphs = {
+            text: UDGraph.from_json(graph_dict)
+            for text, graph_dict in data["parsed_graphs"].items()
+        }
+        
+        return extractor
 
     def to_json(self) -> Dict[str, Any]:
-        raise NotImplementedError
+        data = {
+            "extractor_type": "graph",
+            "parsed_graphs": {
+                text: graph.to_json() for text, graph in self.parsed_graphs.items()
+            },
+            "parser_params": self.text_parser.get_params()
+        }
+
+        return data
 
     def __init__(
         self,
@@ -35,6 +52,7 @@ class GraphBasedExtractor(Extractor):
         super(GraphBasedExtractor, self).__init__()
         self.text_parser = GraphParserClient(parser_url)
         self.default_relation = default_relation
+        self.n_rules = 0
 
     def _parse_text(self, text: str):
         """
@@ -90,7 +108,7 @@ class GraphBasedExtractor(Extractor):
                 logging.debug(f"{triplet_toks=}")
 
                 triplet_graph = graph.subgraph(
-                    triplet_toks, handle_unconnected="shortest_path_infer"
+                    triplet_toks, handle_unconnected="shortest_path"
                 )
                 triplet_graphs[triplet_graph] += 1
 
@@ -104,7 +122,7 @@ class GraphBasedExtractor(Extractor):
                     )
                     logging.debug(f"{inferred_pred_toks=}")
                     inferred_pred_graph = graph.subgraph(
-                        inferred_pred_toks, handle_unconnected="shortest_path_infer"
+                        inferred_pred_toks, handle_unconnected="shortest_path"
                     )
                     logging.debug(f"{inferred_pred_graph=}")
                     pred_graphs[inferred_pred_graph] += 1
@@ -112,6 +130,7 @@ class GraphBasedExtractor(Extractor):
         self.pred_graphs = pred_graphs
         self.arg_graphs = arg_graphs
         self.triplet_graphs = triplet_graphs
+        self.n_rules = len(self.pred_graphs)
 
         patterns = []
         threshold = 1
@@ -124,12 +143,17 @@ class GraphBasedExtractor(Extractor):
         self.pred_matcher = GraphFormulaPatternMatcher(
             patterns, converter=None, case_sensitive=False
         )
+        self._is_trained = True
         return [graph for graph, freq in self.pred_graphs.most_common(20)]
 
-    def print_rules(self):
-        print(f"{self.pred_graphs=}")
-        print(f"{self.arg_graphs=}")
-        print(f"{self.triplet_graphs=}")
+    def print_rules(self, console):
+        console.print("[bold green]Extracted Rules:[/bold green]")
+        console.print(f"{self.pred_graphs=}")
+        console.print(f"{self.arg_graphs=}")
+        console.print(f"{self.triplet_graphs=}")
+
+    def get_n_rules(self):
+        return self.n_rules
 
     def extract_triplets_from_text(self, text, **kwargs):
         matches_by_text = {}

@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
 
-from newpotato.evaluate import HITLEvaluator
+from newpotato.evaluate.eval_hitl import HITLEvaluator
 from newpotato.hitl import HITLManager
 from newpotato.utils import get_triplets_from_user
 
@@ -140,11 +140,6 @@ class NPTerminalClient:
             table.add_row(sen, str(graph["main_edge"]))
         console.print(table)
 
-    def get_sentence(self):
-        console.print("[bold cyan]Enter new sentence:[/bold cyan]")
-        sen = input("> ")
-        self.hitl.add_text(sen)
-
     def _upload_file(self, fn):
         if fn.endswith("txt"):
             self.upload_txt(fn)
@@ -202,15 +197,13 @@ class NPTerminalClient:
         while True:
             self.print_status()
             console.print(
-                "[bold cyan]Choose an action:\n\t(S)entence\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(T)riplets\n\t(R)ules\n\t(I)nference\n\t(E)valuate\n\t(L)oad\n\t(W)rite\n\t(C)lear\n\t(Q)uit\n\t(H)elp[/bold cyan]"
+                "[bold cyan]Choose an action:\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(R)ules\n\t(S)uggest\n\t(I)nference\n\t(E)valuate\n\t(L)oad\n\t(W)rite\n\t(C)lear\n\t(Q)uit\n\t(H)elp[/bold cyan]"
             )
             choice = input("> ").upper()
-            if choice in ("T", "I") and self.hitl.extractor.classifier is None:
+            if choice in ("S", "I") and not self.hitl.extractor.is_trained:
                 console.print(
-                    "[bold red]That choice requires a classifier, run (R)ules first![/bold red]"
+                    "[bold red]That choice requires the extractor to be trained, run (R)ules first![/bold red]"
                 )
-            elif choice == "S":
-                self.get_sentence()
             elif choice == "U":
                 self.upload_file()
             elif choice == "G":
@@ -219,7 +212,7 @@ class NPTerminalClient:
                 self.annotate()
             elif choice == "R":
                 self.print_rules()
-            elif choice == "T":
+            elif choice == "S":
                 self.suggest_triplets()
             elif choice == "I":
                 self.classify()
@@ -237,14 +230,14 @@ class NPTerminalClient:
             elif choice == "H":
                 console.print(
                     "[bold cyan]Help:[/bold cyan]\n"
-                    + "\t(S)entence: Enter a new sentence to parse\n"
                     + "\t(U)pload: Upload a file with input text\n"
                     + "\t(G)raphs: Print graphs of parsed sentences\n"
                     + "\t(A)nnotate: Annotate the latest sentence\n"
-                    + "\t(T)riplets: Suggest inferred triplets for sentences\n"
                     + "\t(R)ules: Extract rules from the annotated graphs\n"
-                    + "\t(L)oad: Load HITL state from file\n"
+                    + "\t(S)uggest: Suggest inferred triplets for sentences\n"
+                    + "\t(I)nference: Use rules to predict triplets from sentences\n"
                     + "\t(E)valuate: Evaluate rules on annotated sentences\n"
+                    + "\t(L)oad: Load HITL state from file\n"
                     + "\t(W)rite: Write HITL state to file\n"
                     + "\t(C)lear: Clear the console\n"
                     + "\t(Q)uit: Exit the program\n"
@@ -258,14 +251,16 @@ class NPTerminalClient:
         try:
             self._run()
         except KeyboardInterrupt:
-            while True:
-                console.print("[bold red]Save HITL state? (y/n)[/bold red]")
-                s = input().strip().lower()
-                if s == "y":
-                    self.write_to_file()
-                    break
-                elif s == "n":
-                    break
+            pass
+
+        while True:
+            console.print("[bold red]Save HITL state? (y/n)[/bold red]")
+            s = input().strip().lower()
+            if s == "y":
+                self.write_to_file()
+                break
+            elif s == "n":
+                break
 
 
 def get_args():

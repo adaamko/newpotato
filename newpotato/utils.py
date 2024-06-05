@@ -27,9 +27,12 @@ def _get_single_triplet_from_user(console):
 
     try:
         phrases = [
-            tuple(int(n) for n in ids.split("_")) for ids in annotation.split(",")
+            tuple(int(n) for n in ids.split("_")) if ids else None for ids in annotation.split(",")
         ]
-        return phrases[0], phrases[1:]
+        pred = phrases[0]
+        args = [arg if arg is not None else () for arg in phrases[1:]]
+        return pred, args
+
     except ValueError:
         console.print("[bold red]Could not parse this:[/bold red]", annotation)
         return False
