@@ -67,8 +67,10 @@ class NPTerminalClient:
                 print_tokens(sen, self.hitl.extractor, console)
                 console.print(f"[bold yellow]{triplet_str}[/bold yellow]")
                 choice_str = None
-                while choice_str not in ("c", "i"):
-                    choice_str = input("(c)orrect or (i)ncorrect?")
+                while choice_str not in ("c", "i", "s"):
+                    choice_str = input("(c)orrect, (i)ncorrect, (s)top?")
+                if choice_str == "s":
+                    return
                 positive = True if choice_str == "c" else False
                 self.hitl.store_triplet(sen, triplet, positive=positive)
 

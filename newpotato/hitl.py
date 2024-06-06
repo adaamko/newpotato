@@ -83,7 +83,7 @@ class HITLManager:
         Returns:
             HITLManager: a new HITLManager object with the restored state
         """
-        hitl = HITLManager()
+        hitl = HITLManager(extractor_type=data['extractor_type'])
         hitl.load_triplets(data["triplets"], oracle=oracle)
         hitl.load_extractor(data["extractor_data"])
         return hitl
@@ -103,6 +103,7 @@ class HITLManager:
                 for text, triplets in self.text_to_triplets.items()
             },
             "extractor_data": self.extractor.to_json(),
+            "extractor_type": self.extractor_type
         }
 
     def save(self, fn: str):
