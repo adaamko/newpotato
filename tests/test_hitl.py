@@ -3,6 +3,7 @@ import unittest
 
 from newpotato.datatypes import Triplet
 from newpotato.hitl import HITLManager
+from newpotato.utils import get_toks_from_txt
 
 
 def dict_eq(d1, d2):
@@ -18,14 +19,14 @@ def dict_eq(d1, d2):
 class Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.hitl = HITLManager()
+        cls.hitl = HITLManager(extractor_type='ud')
 
     def test_save_load(self):
         sen = "John loves Mary"
-        self.hitl.get_graphs(sen)[0]
+        self.hitl.extractor.get_graphs(sen)[sen]
         triplet = Triplet((1,), ((0,), (2,)))
-        self.hitl.store_triplet(sen, triplet)
-        self.hitl.get_annotated_graphs()
+        mapped_triplet = self.hitl.extractor.map_triplet(triplet, sen)
+        self.hitl.store_triplet(sen, mapped_triplet)
         rules = self.hitl.get_rules()
 
         fn = tempfile.NamedTemporaryFile(delete="false").name
@@ -38,5 +39,5 @@ class Test(unittest.TestCase):
         sen = "The AssetId property of the DriveType is unique."
         word = "unique"
 
-        self.hitl.get_graphs(sen)
-        assert self.hitl.get_toks_from_txt(word, sen) == (7,)
+        graph = self.hitl.extractor.get_graphs(sen)[sen]
+        assert get_toks_from_txt(word, graph.stanza_sen) == (7,)

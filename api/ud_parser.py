@@ -4,16 +4,21 @@ from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-
-from newpotato.parser import TextParser
+from tuw_nlp.grammar.text_to_ud import TextToUD
 
 logging.basicConfig(
     format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
     level=logging.INFO,
+    force=True,
 )
 
 app = FastAPI()
-parser = TextParser()
+
+LANG = "en"
+NLP_CACHE = "nlp_cache"
+
+parser = TextToUD(LANG, NLP_CACHE)
+graph_type = "UD"
 
 
 class TextToParse(BaseModel):
@@ -67,20 +72,14 @@ def parse(text_to_parse: TextToParse) -> Dict[str, Any]:
 
     logging.info(f"Parsing text: {text_to_parse.text}")
     try:
-        graphs = parser.parse(text_to_parse.text)
-        logging.info("parsing successful")
         json_graphs = []
+        for graph in parser(text_to_parse.text):
+            json_graph = graph.to_json()
+            json_graphs.append(json_graph)
 
-        for graph in graphs:
-            if graph["failed"] is False:
-                json_graphs.append(graph.to_json())
-            else:
-                logging.error(f"Failed to parse: {text_to_parse.text}")
-                logging.error(f"{graph}")
-
-        return {"status": "ok", "graphs": json_graphs}
+        return {"status": "ok", "graphs": json_graphs, "graph_type": graph_type}
 
     except Exception as e:
-        logging.error(f"Error in text classification: {e}")
+        logging.error(f"Parsing error: {e}")
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))

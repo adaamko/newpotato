@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Dict, List, Tuple
+import traceback
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -11,7 +12,12 @@ from newpotato.hitl import HITLManager
 app = FastAPI()
 hitl_manager = HITLManager()
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+
+logging.basicConfig(
+    format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    force=True,
+)
 
 
 # Define request and response models
@@ -23,6 +29,7 @@ class TextToParse(BaseModel):
     """
 
     text: str
+    doc_id: str = None
 
 
 class SentencesToInfer(BaseModel):
@@ -46,7 +53,8 @@ class Annotation(BaseModel):
 
     text: str
     pred: Tuple[int, ...]
-    args: List[Tuple[int, ...]] = Field(..., min_items=2)
+    # args can be None
+    args: List[Optional[Tuple[int, ...]]] = Field(..., min_items=2)
 
 
 class ExtractorData(BaseModel):
@@ -119,11 +127,12 @@ def parse_text(text_to_parse: TextToParse):
 
     logging.info("Initiating text parsing.")
     try:
-        hitl_manager.get_graphs(text_to_parse.text)
+        hitl_manager.extractor.get_graphs(text_to_parse.text, text_to_parse.doc_id)
         logging.info("Text parsing and storage successful.")
         return {"status": "ok"}
     except Exception as e:
         logging.error(f"Error parsing text: {e}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -138,9 +147,11 @@ def annotate_text(annotation: Annotation) -> Dict[str, Any]:
 
     logging.info("Initiating annotation storage.")
     try:
-        graph = hitl_manager.get_graphs(annotation.text)[0]
-        triplet = Triplet(annotation.pred, annotation.args, graph)
-        if not triplet.mapped:
+        graph = hitl_manager.extractor.get_graph(annotation.text)
+        toks = hitl_manager.extractor.get_tokens(annotation.text)
+        triplet = Triplet(annotation.pred, annotation.args, toks=toks)
+        mapped_triplet = hitl_manager.extractor.map_triplet(triplet, annotation.text)
+        if mapped_triplet is False:
             logging.warning("Triplet not mapped.")
             return {
                 "status": "error",
@@ -148,12 +159,13 @@ def annotate_text(annotation: Annotation) -> Dict[str, Any]:
                 "graph": graph.to_json(),
             }
 
-        hitl_manager.store_triplet(annotation.text, triplet, True)
+        hitl_manager.store_triplet(annotation.text, mapped_triplet, True)
 
         logging.info("Annotation storage successful.")
         return {"status": "ok"}
     except Exception as e:
         logging.error(f"Error storing annotation: {e}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -168,11 +180,12 @@ def get_tokens(text: str) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Dictionary containing tokens.
     """
-    logging.info(f"Retrieving tokens for text: {text}.")
-    if not hitl_manager.is_parsed(text):
+    logging.info(f"Retrieving tokens for text: {repr(text)}.")
+    if not hitl_manager.extractor.is_parsed(text):
         logging.warning("Text not parsed.")
+        logging.info(f"parsed: {list(hitl_manager.extractor.parsed_graphs.keys())}")
         raise HTTPException(status_code=400, detail="Text not parsed")
-    tokens = hitl_manager.get_tokens(text)
+    tokens = hitl_manager.extractor.get_tokens(text)
     indexed_tokens = [
         {"index": i, "token": str(token)} for i, token in enumerate(tokens)
     ]
@@ -205,6 +218,30 @@ def get_triplets(text: str) -> Dict[str, Any]:
         return {"triplets": triplets}
     except Exception as e:
         logging.error(f"Error retrieving annotated triplets: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/triplets/all_by_sen")
+def get_all_triplets_by_sen() -> Dict[str, Any]:
+    """Retrieves all annotated triplets.
+
+    Returns:
+        Dict[str, Any]: Dictionary containing annotated triplets.
+    """
+    logging.info("Initiating all annotated triplets retrieval.")
+    try:
+        sen_to_triplets = hitl_manager.get_true_triplets()
+        triplets_by_sen = {}
+        for text in sen_to_triplets:
+            triplets_by_sen[text] = []
+            for triplet in sen_to_triplets[text]:
+                triplets_by_sen[text].append((triplet.pred, triplet.args, str(triplet), text))
+        logging.info("All annotated triplets by sen retrieval successful.")
+        return {"triplets_by_sen": triplets_by_sen}
+    except Exception as e:
+        logging.error(f"Error retrieving all annotated triplets: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -228,6 +265,7 @@ def get_all_triplets() -> Dict[str, Any]:
         return {"triplets": triplets}
     except Exception as e:
         logging.error(f"Error retrieving all annotated triplets: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -245,14 +283,16 @@ def delete_triplet(annotation: Annotation) -> Dict[str, Any]:
         logging.info(
             f"Annotation: {annotation.text}, {annotation.pred}, {annotation.args}"
         )
-        graph = hitl_manager.get_graphs(annotation.text)[0]
-        triplet = Triplet(annotation.pred, annotation.args, graph)
+        toks = hitl_manager.extractor.get_tokens(annotation.text)
+        triplet = Triplet(annotation.pred, annotation.args, toks=toks)
+        mapped_triplet = hitl_manager.extractor.map_triplet(triplet, annotation.text)
         logging.info(f"Deleting triplet: {triplet}")
-        hitl_manager.delete_triplet(annotation.text, triplet)
+        hitl_manager.delete_triplet(annotation.text, mapped_triplet)
         logging.info("Triplet deletion successful.")
         return {"status": "ok"}
     except Exception as e:
         logging.error(f"Error deleting triplet: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -266,12 +306,47 @@ def get_sentences() -> Dict[str, List[str]]:
     """
     logging.info("Initiating sentence retrieval.")
     try:
-        parsed_graphs = hitl_manager.parsed_graphs
+        parsed_graphs = hitl_manager.extractor.parsed_graphs
         sentences = [sen for sen in parsed_graphs.keys() if sen != "latest"]
         logging.info("Sentence retrieval successful.")
         return {"sentences": sentences}
     except Exception as e:
         logging.error(f"Error retrieving sentences: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/documents")
+def get_documents() -> Dict[str, List[List[str]]]:
+    """Retrieves all sentences grouped by their graph (document).
+
+    Returns:
+        Dict[str, Any]: Dictionary containing documents.
+    """
+
+    logging.info("Initiating document retrieval.")
+    try:
+        parsed_graphs = hitl_manager.extractor.parsed_graphs
+        documents = {}
+        sens = [sen for sen in parsed_graphs.keys() if sen != "latest"]
+
+        for sen in sens:
+            doc_ids = hitl_manager.extractor.get_doc_ids(sen)
+            for doc_id in doc_ids:
+                if doc_id not in documents:
+                    documents[doc_id] = []
+                documents[doc_id].append(sen)
+
+        # Flatten documents into a list of lists ordered by document id (mapped to int)
+
+        documents = [
+            documents[doc_id] for doc_id in sorted(documents, key=lambda x: int(x))
+        ]
+        logging.info("Document retrieval successful.")
+        return {"documents": documents}
+    except Exception as e:
+        logging.error(f"Error retrieving documents: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -290,6 +365,7 @@ def get_rules(learn: bool = False) -> Dict[str, Any]:
         return {"rules": rules}
     except Exception as e:
         logging.error(f"Error in rule extraction or retrieval: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -302,11 +378,12 @@ def get_annotated_graphs() -> Dict[str, Any]:
     """
     logging.info("Initiating annotated graph retrieval.")
     try:
-        annotated_graphs = hitl_manager.get_annotated_graphs()
+        annotated_graphs = hitl_manager.extractor.get_annotated_graphs()
         logging.info("Annotated graph retrieval successful.")
         return {"annotated_graphs": annotated_graphs}
     except Exception as e:
         logging.error(f"Error retrieving annotated graphs: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -324,7 +401,7 @@ def infer(text_to_classify: TextToParse) -> Dict[str, Any]:
 
     logging.info("Initiating text classification.")
     try:
-        matches_by_text = hitl_manager.extract_triplets_from_text(
+        matches_by_text = hitl_manager.extractor.extract_triplets_from_text(
             text_to_classify.text, convert_to_text=True
         )
         logging.info("Text classification successful.")
@@ -342,6 +419,7 @@ def infer(text_to_classify: TextToParse) -> Dict[str, Any]:
 
     except Exception as e:
         logging.error(f"Error in text classification: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -360,7 +438,7 @@ def infer_sentences(sentences: SentencesToInfer) -> Dict[str, Any]:
     try:
         matches_by_text = {}
         for sentence in sentences.sentences:
-            matches = hitl_manager.extract_triplets_from_text(
+            matches = hitl_manager.extractor.extract_triplets_from_text(
                 sentence, convert_to_text=True
             )
             # Add matches to matches_by_text
@@ -385,4 +463,5 @@ def infer_sentences(sentences: SentencesToInfer) -> Dict[str, Any]:
 
     except Exception as e:
         logging.error(f"Error in sentence classification: {e}")
+        logging.error(f"\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))

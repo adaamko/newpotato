@@ -1,20 +1,23 @@
-import argparse
 import logging
-import sys
 from collections import Counter, defaultdict
 
-from newpotato.hitl import HITLManager
+from newpotato.datatypes import triplets_to_str
 
 
-class HITLEvaluator:
-    def __init__(self, hitl):
-        self.hitl = hitl
+class Evaluator:
+    def __init__(self):
         self.reset()
 
     def reset(self):
         self.events = None
         self.counts = None
         self.results = None
+
+    def infer_triplets(self, sen):
+        raise NotImplementedError
+
+    def gen_texts_with_gold_triplets(self):
+        raise NotImplementedError
 
     def _get_counts(self):
         c = Counter()
@@ -37,9 +40,9 @@ class HITLEvaluator:
 
     def _get_events(self):
         self.events = []
-        for sen in self.hitl.text_to_triplets:
-            golds = set([triplet for triplet, _ in self.hitl.text_to_triplets[sen]])
-            preds = set(self.hitl.infer_triplets(sen))
+        for sen, gold_list in self.gen_texts_with_gold_triplets():
+            golds = set(gold_list)
+            preds = set(self.infer_triplets(sen))
             self.events.append((sen, golds, preds))
 
     def get_events(self):
@@ -61,10 +64,10 @@ class HITLEvaluator:
     def write_events(self, stream):
         for sen, golds, preds in self.get_events():
             e_type = self.get_event_type(golds, preds)
-            logging.debug("golds: " + ", ".join(f"{(t.pred, t.args)}" for t in golds))
+            logging.debug("golds: " + ", ".join(f"{(t.pred, t.args)}" for t, positive in golds))
             logging.debug("preds: " + ", ".join(f"{(t.pred, t.args)}" for t in preds))
-            golds_txt = " ".join(self.hitl.triplets_to_str(golds, sen))
-            preds_txt = " ".join(self.hitl.triplets_to_str(preds, sen))
+            golds_txt = " ".join(triplets_to_str(golds))
+            preds_txt = " ".join(triplets_to_str(preds))
             stream.write(f"{e_type}\t{sen}\t{golds_txt}\t{preds_txt}\n")
 
     def write_events_to_file(self, fn):
@@ -97,41 +100,3 @@ class HITLEvaluator:
             self.results = self._get_results()
 
         return self.results
-
-
-def get_args():
-    parser = argparse.ArgumentParser(description="")
-    parser.add_argument("-d", "--debug", action="store_true")
-    parser.add_argument("-r", "--relearn", action="store_true")
-    parser.add_argument("hitl_state_file")
-    parser.add_argument("-e", "--events_file", default=None, type=str)
-    return parser.parse_args()
-
-
-def main():
-    args = get_args()
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
-        force=True
-    )
-    if args.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
-
-    hitl = HITLManager.load(args.hitl_state_file)
-    if args.relearn:
-        hitl.get_rules(learn=False)
-    evaluator = HITLEvaluator(hitl)
-    results = evaluator.get_results()
-    for key, value in results.items():
-        print(f"{key}: {value}")
-
-    if args.events_file is not None:
-        if args.events_file == "-":
-            evaluator.write_events(sys.stdout)
-        else:
-            evaluator.write_events_to_file(args.events_file)
-
-
-if __name__ == "__main__":
-    main()

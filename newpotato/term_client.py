@@ -6,9 +6,9 @@ from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
 
-from newpotato.evaluate import HITLEvaluator
+from newpotato.evaluate.eval_hitl import HITLEvaluator
 from newpotato.hitl import HITLManager
-from newpotato.utils import get_triplets_from_user
+from newpotato.utils import get_triplets_from_user, print_tokens
 
 console = Console()
 
@@ -17,7 +17,7 @@ class NPTerminalClient:
     def __init__(self, args):
         if args.load_state is None:
             console.print("no state file provided, initializing new HITL")
-            self.hitl = HITLManager()
+            self.hitl = HITLManager(args.extractor_type)
         else:
             console.print(f"loading HITL state from {args.load_state}")
             self.hitl = HITLManager.load(args.load_state, args.oracle)
@@ -64,11 +64,13 @@ class NPTerminalClient:
             for triplet in self.hitl.infer_triplets(sen):
                 triplet_str = str(triplet)
                 console.print("[bold yellow]How about this?[/bold yellow]")
-                console.print(f"[bold yellow]{sen}[/bold yellow]")
+                print_tokens(sen, self.hitl.extractor, console)
                 console.print(f"[bold yellow]{triplet_str}[/bold yellow]")
                 choice_str = None
-                while choice_str not in ("c", "i"):
-                    choice_str = input("(c)orrect or (i)ncorrect?")
+                while choice_str not in ("c", "i", "s"):
+                    choice_str = input("(c)orrect, (i)ncorrect, (s)top?")
+                if choice_str == "s":
+                    return
                 positive = True if choice_str == "c" else False
                 self.hitl.store_triplet(sen, triplet, positive=positive)
 
@@ -80,16 +82,22 @@ class NPTerminalClient:
             console.print(
                 "[bold green]Classifying a sentence, please provide one:[/bold green]"
             )
-            sen = input("> ")
+            text = input("> ")
 
-            matches = self.hitl.match_rules(sen)
+            matches_by_text = self.hitl.extractor.extract_triplets_from_text(text)
 
-            if not matches:
-                console.print("[bold red]No matches found[/bold red]")
-            else:
-                console.print("[bold green]Matches:[/bold green]")
-                for match in matches:
-                    console.print(match)
+            console.print("[bold green]Triplets:[/bold green]")
+            table = Table(show_header=True, header_style="bold magenta")
+            table.add_column("Sentence")
+            table.add_column("Triplets")
+            table.add_column("Rules triggered")
+            for sen, match_dict in matches_by_text.items():
+                table.add_row(
+                    sen,
+                    ", ".join(str(t) for t in match_dict["triplets"]),
+                    ", ".join(str(r) for r in match_dict["rules_triggered"]),
+                )
+            console.print(table)
 
     def print_status(self):
         status = self.hitl.get_status()
@@ -107,14 +115,8 @@ class NPTerminalClient:
         self.print_triplets(triplets, max_n=10)
 
     def print_rules(self):
-        annotated_graphs = self.hitl.get_annotated_graphs()
-        rules = self.hitl.get_rules(learn=self.learn)
-
-        console.print("[bold green]Annotated Graphs:[/bold green]")
-        console.print(annotated_graphs)
-
-        console.print("[bold green]Extracted Rules:[/bold green]")
-        console.print(rules)
+        self.hitl.get_rules()
+        self.hitl.print_rules(console)
 
     def print_triplets(self, triplets_by_sen, max_n=None):
         console.print("[bold green]Current Triplets:[/bold green]")
@@ -142,14 +144,10 @@ class NPTerminalClient:
         table = Table(show_header=True, header_style="bold magenta")
         table.add_column("Sentence")
         table.add_column("Graph")
-        for sen, graph in self.hitl.parsed_graphs.items():
-            table.add_row(sen, str(graph["main_edge"]))
+        for sen, graph in self.hitl.extractor.parsed_graphs.items():
+            # table.add_row(sen, str(graph["main_edge"]))
+            table.add_row(sen, str(graph))
         console.print(table)
-
-    def get_sentence(self):
-        console.print("[bold cyan]Enter new sentence:[/bold cyan]")
-        sen = input("> ")
-        self.hitl.get_graphs(sen)
 
     def _upload_file(self, fn):
         if fn.endswith("txt"):
@@ -166,7 +164,7 @@ class NPTerminalClient:
         console.print("[bold cyan]Parsing text...[/bold cyan]")
         with open(fn) as f:
             for line in tqdm(f):
-                self.hitl.get_graphs(line.strip())
+                self.hitl.extractor.get_graphs(line.strip())
         console.print("[bold cyan]Done![/bold cyan]")
 
     def annotate(self):
@@ -186,7 +184,7 @@ class NPTerminalClient:
             else:
                 cands = [
                     sen
-                    for sen in self.hitl.parsed_graphs
+                    for sen in self.hitl.extractor.parsed_graphs
                     if sen.lower().startswith(query)
                 ]
                 if len(cands) > 20:
@@ -204,19 +202,17 @@ class NPTerminalClient:
                 else:
                     get_triplets_from_user(sen, self.hitl, console)
 
-    def run(self):
+    def _run(self):
         while True:
             self.print_status()
             console.print(
-                "[bold cyan]Choose an action:\n\t(S)entence\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(T)riplets\n\t(R)ules\n\t(I)nference\n\t(E)valuate\n\t(L)oad\n\t(W)rite\n\t(C)lear\n\t(Q)uit\n\t(H)elp[/bold cyan]"
+                "[bold cyan]Choose an action:\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(R)ules\n\t(S)uggest\n\t(I)nference\n\t(E)valuate\n\t(L)oad\n\t(W)rite\n\t(C)lear\n\t(Q)uit\n\t(H)elp[/bold cyan]"
             )
             choice = input("> ").upper()
-            if choice in ("T", "I") and self.hitl.extractor.classifier is None:
+            if choice in ("S", "I") and not self.hitl.extractor.is_trained:
                 console.print(
-                    "[bold red]That choice requires a classifier, run (R)ules first![/bold red]"
+                    "[bold red]That choice requires the extractor to be trained, run (R)ules first![/bold red]"
                 )
-            elif choice == "S":
-                self.get_sentence()
             elif choice == "U":
                 self.upload_file()
             elif choice == "G":
@@ -225,7 +221,7 @@ class NPTerminalClient:
                 self.annotate()
             elif choice == "R":
                 self.print_rules()
-            elif choice == "T":
+            elif choice == "S":
                 self.suggest_triplets()
             elif choice == "I":
                 self.classify()
@@ -243,14 +239,14 @@ class NPTerminalClient:
             elif choice == "H":
                 console.print(
                     "[bold cyan]Help:[/bold cyan]\n"
-                    + "\t(S)entence: Enter a new sentence to parse\n"
                     + "\t(U)pload: Upload a file with input text\n"
                     + "\t(G)raphs: Print graphs of parsed sentences\n"
                     + "\t(A)nnotate: Annotate the latest sentence\n"
-                    + "\t(T)riplets: Suggest inferred triplets for sentences\n"
                     + "\t(R)ules: Extract rules from the annotated graphs\n"
-                    + "\t(L)oad: Load HITL state from file\n"
+                    + "\t(S)uggest: Suggest inferred triplets for sentences\n"
+                    + "\t(I)nference: Use rules to predict triplets from sentences\n"
                     + "\t(E)valuate: Evaluate rules on annotated sentences\n"
+                    + "\t(L)oad: Load HITL state from file\n"
                     + "\t(W)rite: Write HITL state to file\n"
                     + "\t(C)lear: Clear the console\n"
                     + "\t(Q)uit: Exit the program\n"
@@ -260,6 +256,21 @@ class NPTerminalClient:
             else:
                 console.print("[bold red]Invalid choice[/bold red]")
 
+    def run(self):
+        try:
+            self._run()
+        except KeyboardInterrupt:
+            pass
+
+        while True:
+            console.print("[bold red]Save HITL state? (y/n)[/bold red]")
+            s = input().strip().lower()
+            if s == "y":
+                self.write_to_file()
+                break
+            elif s == "n":
+                break
+
 
 def get_args():
     parser = argparse.ArgumentParser(description="")
@@ -268,6 +279,7 @@ def get_args():
     parser.add_argument("-o", "--oracle", action="store_true")
     parser.add_argument("-l", "--load_state", default=None, type=str)
     parser.add_argument("-u", "--upload_file", default=None, type=str)
+    parser.add_argument("-x", "--extractor_type", default='ud', type=str)
     return parser.parse_args()
 
 

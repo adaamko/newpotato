@@ -1,0 +1,21 @@
+,food_entity,disease_entity,sentence,disease_doid,is_cause,is_treat
+0,bombax ceiba l. (bombacaceae) fruits,urinary stones,"Interestingly, many Indian tribes use Bombax ceiba L. (Bombacaceae) fruits as a traditional medicine for the treatment of urinary stones.",,0.0,1.0
+1,ultra-processed food,obesity,"Ultra-processed food consumption has been associated with several health outcomes such as obesity, hypertension, cardiovascular disease and cancer.",DOID:9970,1.0,0.0
+2,salt,osteoporosis,"Salt has notoriously been blamed for causing an increase in the urinary excretion of calcium, and thus is a considered a risk factor for osteoporosis.",DOID:11476,1.0,0.0
+3,broiler chicken,footpad dermatitis,"in broiler chicken flocks when animal-based measures related to footpad dermatitis, hock burns, body lesions and arthritis are identified under commercial conditions (high density).",,0.0,0.0
+4,sfp,diabetes,"In short, this study demonstrated that SFP could be developed as functional foods or pharmaceutical supplements for the prevention or mitigation of diabetes and its complications.",DOID:9351,0.0,1.0
+5,wine,ad,We also showed that moderate consumption of wine was associated with a lower risk of developing AD.,,0.0,1.0
+6,ginger,diabetes,Recent evidence revealed the potential of ginger for reducing diabetes-induced oxidative stress markers.,DOID:9351,0.0,1.0
+7,citrus aurantium l. (tpe-ca),inflammatory diseases,"Total phenolic extracts of Citrus aurantium L. (TPE-CA) are rich in dietary bioactive flavonoids, which show beneficial effects on liver health and are regarded as therapeutic tools against inflammatory diseases.",,0.0,1.0
+8,wheat,allergic reactions,Wheat is one of the five most common foods that trigger allergic reactions in children.,,1.0,0.0
+9,low-carbohydrate , ketogenic ( vlc ) diet,type 2 diabetes,"Adults with type 2 diabetes may experience health benefits, including glycemic control and weight loss, from following a very low-carbohydrate, ketogenic (VLC) diet.",DOID:9352,0.0,1.0
+10,chicken eggshell membrane ( em ),arthritis,"It was hypothesized that chicken eggshell membrane (EM) is effective in the regeneration of cartilage and/or immunomodulation (oral tolerance), and as such relieves pain and stiffness in joints commonly affected in arthritis.",,0.0,1.0
+11,zinc,mnds,"MNDs remain a major public health concern particularly for women and children, with calcium, iodine, iron, selenium, zinc, folate and vitamin A deficiencies being the most common.",,0.0,0.0
+12,folic,neural tube defects,There is evidence that adequate amounts of folic acid supply to women before and during early pregnancy decreases the risk of having a neural tube defects affected child.,DOID:0080074,0.0,1.0
+13,sword bean,cancer,"Sword bean has been known as a traditional medicinal plant to treat cancer, sinus infection, and suppurative disease.",,0.0,1.0
+14,milk,allergic,"While many egg and milk-allergic children tolerate baked egg (BE) and milk (BM), reactions elicited by these oral food challenges (OFCs) can be severe.",,0.0,0.0
+15,excessive consumption of red meat,coronary heart diseases,Excessive consumption of red meat is associated with various diseases including coronary heart diseases and cancer.,DOID:3393,1.0,0.0
+16,fruit,dementia,"Having at least three servings of vegetables and two servings of fruit a day could help prevent dementia in older adults, new research suggests.",DOID:1307,0.0,1.0
+17,milk,cardiovascular disease,"Milk and dairy products containing milk fat are major food sources of saturated fatty acids, which have been linked to increased risk of cardiovascular-related clinical outcomes such as cardiovascular disease (CVD), coronary heart disease (CHD), and stroke.",,1.0,0.0
+18,punica granatum,ailments,Over one thousand cultivars of Punica granatum (Punicaceae) are known and some are traditionally used to treat various ailments.,,0.0,1.0
+19,coffee,metabolic syndrome,"Further, waste products from tropical fruits including mangosteen rind, coffee pulp and spent coffee grounds provide further options to reduce metabolic syndrome.",DOID:0014667,0.0,1.0
