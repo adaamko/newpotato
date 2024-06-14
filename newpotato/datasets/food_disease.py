@@ -120,7 +120,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     console.print("initializing HITL session")
-    hitl = HITLManager()
+    hitl = HITLManager(extractor_type='ud')
     console.print(f"loading FoodDisease data from {args.input_file}")
     load_fd_to_hitl(args.input_file, hitl, args.which_rel)
 
