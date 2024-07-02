@@ -1,10 +1,12 @@
 import argparse
 import logging
 import sys
+from collections import defaultdict
 
 from rich.console import Console
 
 from newpotato.datasets.food_disease import load_and_map_fd
+from newpotato.datasets.lsoie import load_and_map_lsoie
 from newpotato.extractors.graph_extractor import GraphBasedExtractor
 from newpotato.evaluate.evaluate import Evaluator
 
@@ -25,6 +27,7 @@ class ExtractorEvaluator(Evaluator):
 
 def get_args():
     parser = argparse.ArgumentParser(description="")
+    parser.add_argument("-t", "--data_type", default=None, type=str)
     parser.add_argument("-i", "--input_file", default=None, type=str)
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-e", "--events_file", default=None, type=str)
@@ -45,11 +48,18 @@ def main():
     console = Console()
     extractor = GraphBasedExtractor(default_relation=args.which_rel)
     logging.info(f"loading gold data from {args.input_file=}...")
-    gold_data = {
-        sen: [(triplet, True) for triplet in triplets]
-        for sen, triplets in load_and_map_fd(args.input_file, extractor, args.which_rel)
-    }
-    
+    if args.data_type == 'fd':
+        gold_data = {
+            sen: [(triplet, True) for triplet in triplets]
+            for sen, triplets in load_and_map_fd(args.input_file, extractor, args.which_rel)
+        }
+    elif args.data_type == 'lsoie':
+        gold_data = defaultdict(list)
+        for sen, triplet in load_and_map_lsoie(args.input_file, extractor):
+            gold_data[sen].append((triplet, True))
+    else:
+        raise ValueError(f'unknown data type: {args.data_type}')
+
     # training
     logging.info("training...")
     extractor.get_rules(gold_data)

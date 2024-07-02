@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from newpotato.datatypes import GraphMappedTriplet, Triplet
 from newpotato.extractors.extractor import Extractor
 from newpotato.extractors.graph_parser_client import GraphParserClient
+from newpotato.utils import eliminate_subsets
 
 from tuw_nlp.graph.ud_graph import UDGraph
 from tuw_nlp.graph.utils import GraphFormulaPatternMatcher
@@ -72,10 +73,11 @@ class GraphBasedExtractor(Extractor):
         """
         return [w.lemma for w in self.parsed_graphs[sen].stanza_sen.words]
 
-    def get_rules(self, text_to_triplets, **kwargs):
+    def _get_patterns(self, text_to_triplets):
         pred_graphs = Counter()
         triplet_graphs = Counter()
-        arg_graphs = defaultdict(Counter)
+        arg_graphs_by_pred = defaultdict(Counter)
+        all_arg_graphs = Counter()
         for text, triplets in text_to_triplets.items():
             # toks = self.get_tokens(text)
             logging.debug(f"{text=}")
@@ -95,7 +97,8 @@ class GraphBasedExtractor(Extractor):
 
                 for arg_graph in triplet.arg_graphs:
                     logging.debug(f"{arg_graph=}")
-                    arg_graphs[pred_lemmas][arg_graph] += 1
+                    arg_graphs_by_pred[pred_lemmas][arg_graph] += 1
+                    all_arg_graphs[arg_graph] += 1
 
                 logging.debug(f"{triplet_toks=}")
 
@@ -120,28 +123,41 @@ class GraphBasedExtractor(Extractor):
                     pred_graphs[inferred_pred_graph] += 1
 
         self.pred_graphs = pred_graphs
-        self.arg_graphs = arg_graphs
+        self.all_arg_graphs = all_arg_graphs
+        self.arg_graphs_by_pred = arg_graphs_by_pred
         self.triplet_graphs = triplet_graphs
-        self.n_rules = len(self.pred_graphs)
 
+    def _get_matcher_from_graphs(self, graphs, label, threshold, pos_only):
         patterns = []
-        threshold = 1
-        label = "LABEL"
-        for pred_graph, freq in self.pred_graphs.most_common():
+        for graph, freq in graphs.most_common():
             if freq < threshold:
                 break
-            patterns.append(((pred_graph.G,), (), label))
+            patterns.append(((graph.G,), (), label))
 
-        self.pred_matcher = GraphFormulaPatternMatcher(
+        matcher = GraphFormulaPatternMatcher(
             patterns, converter=None, case_sensitive=False
         )
+        return matcher
+
+    def get_rules(self, text_to_triplets, **kwargs):
+        logging.info("collecting patterns...")
+        self._get_patterns(text_to_triplets)
+        logging.info("getting rules...")
+        self.pred_matcher = self._get_matcher_from_graphs(
+            self.pred_graphs, label="PRED", threshold=1, pos_only=False
+        )
+        self.arg_matcher = self._get_matcher_from_graphs(
+            self.all_arg_graphs, label="ARG", threshold=1, pos_only=False
+        )
+        self.n_rules = len(self.pred_matcher.patts)
+
         self._is_trained = True
         return [graph for graph, freq in self.pred_graphs.most_common(20)]
 
     def print_rules(self, console):
         console.print("[bold green]Extracted Rules:[/bold green]")
         console.print(f"{self.pred_graphs=}")
-        console.print(f"{self.arg_graphs=}")
+        console.print(f"{self.all_arg_graphs=}")
         console.print(f"{self.triplet_graphs=}")
 
     def get_n_rules(self):
@@ -185,32 +201,43 @@ class GraphBasedExtractor(Extractor):
         logging.debug(f"triplet mapped: {arg_subgraphs=}")
         return GraphMappedTriplet(triplet, pred_subgraph, arg_subgraphs)
 
+    def _match(self, matcher, sen_graph):
+        for key, i, subgraphs in matcher.match(sen_graph.G, return_subgraphs=True):
+            for subgraph in subgraphs:
+                logging.debug(f"MATCH: {sen_graph=}")
+                logging.debug(f"MATCH: {subgraph.graph=}")
+                ud_subgraph = sen_graph.subgraph(subgraph.nodes)
+                indices = frozenset(
+                    idx
+                    for idx, token in enumerate(ud_subgraph.tokens)
+                    if token is not None
+                )
+                yield indices
+
     def _infer_triplets(self, text: str):
         for sen, sen_graph in self.parse_text(text):
-            triplets_and_subgraphs = []
-            for key, i, subgraphs in self.pred_matcher.match(
-                sen_graph.G, return_subgraphs=True
-            ):
-                for subgraph in subgraphs:
-                    logging.debug(f"MATCH: {sen=}")
-                    logging.debug(f"MATCH: {subgraph.graph=}")
-                    ud_subgraph = sen_graph.subgraph(subgraph.nodes)
-                    pred_indices = tuple(
-                        idx
-                        for idx, token in enumerate(ud_subgraph.tokens)
-                        if token is not None
+            pred_cands = set(
+                indices for indices in self._match(self.pred_matcher, sen_graph)
+            )
+            arg_cands = set(
+                indices for indices in self._match(self.arg_matcher, sen_graph)
+            )
+            for pred in pred_cands:
+                args = [
+                    tuple(sorted(arg))
+                    for arg in eliminate_subsets(
+                        [
+                            arg_cand
+                            for arg_cand in arg_cands
+                            if arg_cand.isdisjoint(pred)
+                        ]
                     )
-                    triplet = Triplet(pred_indices, ())
-                    mapped_triplet = self.map_triplet(triplet, sen)
-                    triplets_and_subgraphs.append((mapped_triplet, ud_subgraph))
-            yield sen, triplets_and_subgraphs
+                ]
+
+                triplet = Triplet(tuple(sorted(pred)), args)
+                mapped_triplet = self.map_triplet(triplet, sen)
+                yield sen, mapped_triplet
 
     def infer_triplets(self, text: str, **kwargs) -> List[Triplet]:
-        triplets = sorted(
-            set(
-                triplet
-                for sen, triplets_and_subgraphs in self._infer_triplets(text)
-                for triplet, _ in triplets_and_subgraphs
-            )
-        )
+        triplets = sorted(set(triplet for sen, triplet in self._infer_triplets(text)))
         return triplets

@@ -10,7 +10,7 @@ from newpotato.hitl import HITLManager
 
 # Initialize FastAPI, HITLManager
 app = FastAPI()
-hitl_manager = HITLManager()
+hitl_manager = HITLManager(extractor_type='ud')
 # Set up logging
 
 logging.basicConfig(

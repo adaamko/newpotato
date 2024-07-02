@@ -1,5 +1,8 @@
+import collections
+import operator
 import logging
 import re
+from functools import reduce
 from typing import Tuple
 
 from stanza.models.common.doc import Sentence
@@ -27,7 +30,8 @@ def _get_single_triplet_from_user(console):
 
     try:
         phrases = [
-            tuple(int(n) for n in ids.split("_")) if ids else None for ids in annotation.split(",")
+            tuple(int(n) for n in ids.split("_")) if ids else None
+            for ids in annotation.split(",")
         ]
         pred = phrases[0]
         args = [arg if arg is not None else () for arg in phrases[1:]]
@@ -183,3 +187,43 @@ def get_toks_from_txt(
     tok_ids_to_return = tuple(range(tok_i, tok_j))
     logging.debug(f"{tok_ids_to_return=}")
     return tok_ids_to_return
+
+
+def is_power_of_two(n):
+    """Returns True iff n is a power of two.  Assumes n > 0."""
+    return (n & (n - 1)) == 0
+
+
+def eliminate_subsets(sequence_of_sets):
+    """Return a list of the elements of `sequence_of_sets`, removing all
+    elements that are subsets of other elements.  Assumes that each
+    element is a set or frozenset and that no element is repeated.
+    Based on https://stackoverflow.com/a/14107790/2753770"""
+    # The code below does not handle the case of a sequence containing
+    # only the empty set, so let's just handle all easy cases now.
+    if len(sequence_of_sets) <= 1:
+        return list(sequence_of_sets)
+    # We need an indexable sequence so that we can use a bitmap to
+    # represent each set.
+    if not isinstance(sequence_of_sets, collections.abc.Sequence):
+        sequence_of_sets = list(sequence_of_sets)
+    # For each element, construct the list of all sets containing that
+    # element.
+    sets_containing_element = {}
+    for i, s in enumerate(sequence_of_sets):
+        for element in s:
+            try:
+                sets_containing_element[element] |= 1 << i
+            except KeyError:
+                sets_containing_element[element] = 1 << i
+    # For each set, if the intersection of all of the lists in which it is
+    # contained has length != 1, this set can be eliminated.
+    out = [
+        s
+        for s in sequence_of_sets
+        if s
+        and is_power_of_two(
+            reduce(operator.and_, (sets_containing_element[x] for x in s))
+        )
+    ]
+    return out
