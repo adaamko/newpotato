@@ -98,6 +98,10 @@ class GraphMappedTriplet(Triplet):
 
         return GraphMappedTriplet(triplet, pred_graph, arg_graphs)
 
+    @property
+    def arg_roots(self):
+        return [a_graph.root for a_graph in self.arg_graphs]
+    
     def to_json(self):
         return {
             "pred": self.pred,

@@ -22,7 +22,8 @@ class ExtractorEvaluator(Evaluator):
         return preds
 
     def gen_texts_with_gold_triplets(self):
-        yield from self.gold_data.items()
+        for sen, triplet_list in self.gold_data.items():
+            yield sen, [triplet for triplet, is_true in triplet_list if is_true]
 
 
 def get_args():
