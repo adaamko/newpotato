@@ -213,7 +213,6 @@ class GraphBasedExtractor(Extractor):
 
     def map_triplet(self, triplet, sentence, **kwargs):
         graph = self.parsed_graphs[sentence]
-        print(f"mapping triplet: {triplet.pred=}, {triplet.args=}")
         logging.debug(f"mapping triplet to {graph=}")
         pred_subgraph = (
             graph.subgraph(triplet.pred, handle_unconnected="shortest_path")
@@ -293,11 +292,14 @@ class GraphBasedExtractor(Extractor):
                             if arg_roots_to_cover.issubset(arg_cand_root_set):
                                 logging.info("FOUND ONE")
                                 # we have a winner
-                                args = [
-                                    arg_roots_to_arg_cands[arg_root][0]
-                                    for arg_root in arg_roots
-                                ]
-                                triplet = Triplet(pred_cand, args)
+                                if arg_roots_to_cover:
+                                    args = [
+                                        arg_roots_to_arg_cands[arg_root][0]
+                                        for arg_root in arg_roots
+                                    ]
+                                else:
+                                    args = []
+                                triplet = Triplet(pred_cand, args, toks=sen_graph.tokens)
                                 mapped_triplet = self.map_triplet(triplet, sen)
                                 yield sen, mapped_triplet
 

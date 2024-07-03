@@ -31,6 +31,7 @@ def get_args():
     parser.add_argument("-t", "--data_type", default=None, type=str)
     parser.add_argument("-i", "--input_file", default=None, type=str)
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-e", "--events_file", default=None, type=str)
     parser.add_argument("-r", "--which_rel", default=None, type=str)
     return parser.parse_args()
@@ -39,10 +40,12 @@ def get_args():
 def main():
     args = get_args()
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.WARNING,
         format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
         force=True,
     )
+    if args.verbose:
+        logging.getLogger().setLevel(logging.INFO)
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 

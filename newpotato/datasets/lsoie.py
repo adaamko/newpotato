@@ -45,7 +45,7 @@ def load_and_map_lsoie(input_file, extractor):
             ]
             logging.debug(f"{pred=}, {args=}")
 
-            triplet = Triplet(pred, args)
+            triplet = Triplet(pred, args, toks=graph.tokens)
             mapped_triplet = extractor.map_triplet(triplet, sentence)
             yield sentence, mapped_triplet
 

@@ -86,6 +86,7 @@ class Evaluator:
         res["n_gold"] = c["gold"]
         res["n_pred"] = c["pred"]
         res["n_docs"] = c["docs"]
+        res["n_corr"] = c["tp"]
         res["docs_corr"] = c["docs_corr"]
         res["docs_acc"] = c["docs_corr"] / c["docs"]
         if c["pred"] > 0:

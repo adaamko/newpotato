@@ -1,5 +1,6 @@
 import logging
 import traceback
+from contextlib import asynccontextmanager
 from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException
@@ -12,12 +13,21 @@ logging.basicConfig(
     force=True,
 )
 
-app = FastAPI()
 
 LANG = "en"
 NLP_CACHE = "nlp_cache"
 
-parser = TextToUD(LANG, NLP_CACHE)
+models = {}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    models['parser'] = TextToUD(LANG, NLP_CACHE)
+    yield
+    models['parser'].nlp.save_cache_if_changed()
+
+
+app = FastAPI(lifespan=lifespan)
 graph_type = "UD"
 
 
@@ -43,13 +53,13 @@ class ParserParams(BaseModel):
 
 @app.get("/get_params")
 def get_params() -> Dict[str, Any]:
-    params = parser.get_params()
+    params = models['parser'].get_params()
     return {"status": "ok", "params": params}
 
 
 @app.post("/check_params")
 def check_params(params: ParserParams) -> Dict[str, Any]:
-    parser_params = ParserParams(params=parser.get_params())
+    parser_params = ParserParams(params=models['parser'].get_params())
     if params != parser_params:
         logging.error(f"parser params mismatch: {params=}, {parser_params=}")
         raise HTTPException(
@@ -73,7 +83,7 @@ def parse(text_to_parse: TextToParse) -> Dict[str, Any]:
     logging.info(f"Parsing text: {text_to_parse.text}")
     try:
         json_graphs = []
-        for graph in parser(text_to_parse.text):
+        for graph in models['parser'](text_to_parse.text):
             json_graph = graph.to_json()
             json_graphs.append(json_graph)
 
