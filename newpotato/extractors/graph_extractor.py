@@ -1,7 +1,7 @@
 import logging
 from collections import Counter, defaultdict
 from itertools import chain
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from newpotato.datatypes import GraphMappedTriplet, Triplet
 from newpotato.extractors.extractor import Extractor
@@ -45,6 +45,19 @@ class GraphBasedExtractor(Extractor):
         self.text_parser = GraphParserClient(parser_url)
         self.default_relation = default_relation
         self.n_rules = 0
+
+    def _parse_sen_tuple(self, sen_tuple: Tuple):
+        """
+        Parse pretokenized sentence.
+
+        Args:
+            sen_tuple (Tuple): The pretokenized sentence.
+
+        Returns:
+            TODO
+        """
+        graph = self.text_parser.parse_pretokenized(sen_tuple)
+        return sen_tuple, graph
 
     def _parse_text(self, text: str):
         """
@@ -273,7 +286,9 @@ class GraphBasedExtractor(Extractor):
                     indices for indices in self._match(triplet_matcher, sen_graph)
                 )
                 for triplet_cand, triplet_graph in triplet_cands:
-                    inferred_nodes = set(triplet_graph.nodes_by_lextop(inferred_node_indices))
+                    inferred_nodes = set(
+                        triplet_graph.nodes_by_lextop(inferred_node_indices)
+                    )
                     arg_roots = triplet_graph.nodes_by_lextop(arg_root_indices)
                     logging.info("==========================")
                     logging.info(f"{triplet_cand=}")
@@ -299,7 +314,9 @@ class GraphBasedExtractor(Extractor):
                                     ]
                                 else:
                                     args = []
-                                triplet = Triplet(pred_cand, args, toks=sen_graph.tokens)
+                                triplet = Triplet(
+                                    pred_cand, args, toks=sen_graph.tokens
+                                )
                                 mapped_triplet = self.map_triplet(triplet, sen)
                                 yield sen, mapped_triplet
 

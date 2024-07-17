@@ -38,9 +38,21 @@ class GraphParserClient:
     def get_vocab(self):
         return self.vocab
 
+    def parse_pretokenized(self, sen_tuple):
+        response = requests.request(
+            "POST", f"{self.url}/parse", json={"text": "", "pretokenized": sen_tuple}
+        ).json()
+        graph_cls = get_graph_cls(response["graph_type"])
+        json_graphs = response["graphs"]
+        assert (
+            len(json_graphs) == 1
+        ), f"pretokenized sentence split up: {sen_tuple=}, {json_graphs=}"
+        graph = graph_cls.from_json(json_graphs[0])
+        return graph
+
     def parse(self, text):
         response = requests.request(
-            "POST", f"{self.url}/parse", json={"text": text}
+            "POST", f"{self.url}/parse", json={"text": text, "pretokenized": ()}
         ).json()
         graph_cls = get_graph_cls(response["graph_type"])
         json_graphs = response["graphs"]
