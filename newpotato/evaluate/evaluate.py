@@ -1,6 +1,8 @@
 import logging
 from collections import Counter, defaultdict
 
+from tqdm import tqdm
+
 from newpotato.datatypes import triplets_to_str
 
 
@@ -40,7 +42,7 @@ class Evaluator:
 
     def _get_events(self):
         self.events = []
-        for sen, gold_list in self.gen_texts_with_gold_triplets():
+        for sen, gold_list in tqdm(self.gen_texts_with_gold_triplets()):
             golds = set(gold_list)
             preds = set(self.infer_triplets(sen))
             self.events.append((sen, golds, preds))

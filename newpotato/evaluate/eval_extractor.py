@@ -9,6 +9,7 @@ from newpotato.datasets.food_disease import load_and_map_fd
 from newpotato.datasets.lsoie import load_and_map_lsoie
 from newpotato.extractors.graph_extractor import GraphBasedExtractor
 from newpotato.evaluate.evaluate import Evaluator
+from newpotato.hitl import HITLManager
 
 
 class ExtractorEvaluator(Evaluator):
@@ -26,10 +27,19 @@ class ExtractorEvaluator(Evaluator):
             yield sen, [triplet for triplet, is_true in triplet_list if is_true]
 
 
+def split_data(gold_dict, test_size=None):
+    gold_items = list(gold_dict.items())
+    test_size = len(gold_items) // 10 if test_size is None else test_size
+    train_items, val_items = gold_items[:-test_size], gold_items[-test_size:]
+    return dict(train_items), dict(val_items)
+
+
 def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-t", "--data_type", default=None, type=str)
+    parser.add_argument("-s", "--test_size", default=None, type=int)
     parser.add_argument("-i", "--input_file", default=None, type=str)
+    parser.add_argument("-l", "--load_state", default=None, type=str)
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-e", "--events_file", default=None, type=str)
@@ -50,34 +60,46 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     console = Console()
-    extractor = GraphBasedExtractor(default_relation=args.which_rel)
-    logging.info(f"loading gold data from {args.input_file=}...")
-    if args.data_type == 'fd':
-        gold_data = {
-            sen: [(triplet, True) for triplet in triplets]
-            for sen, triplets in load_and_map_fd(args.input_file, extractor, args.which_rel)
-        }
-    elif args.data_type == 'lsoie':
-        gold_data = defaultdict(list)
-        for sen, triplet in load_and_map_lsoie(args.input_file, extractor):
-            gold_data[sen].append((triplet, True))
+    if args.load_state is None:
+        extractor = GraphBasedExtractor(default_relation=args.which_rel)
+        logging.warning(f"loading gold data from {args.input_file=}...")
+        if args.data_type == "fd":
+            gold_data = {
+                sen: [(triplet, True) for triplet in triplets]
+                for sen, triplets in load_and_map_fd(
+                    args.input_file, extractor, args.which_rel
+                )
+            }
+        elif args.data_type == "lsoie":
+            gold_data = defaultdict(list)
+            for sen, triplet in load_and_map_lsoie(args.input_file, extractor):
+                gold_data[sen].append((triplet, True))
+        else:
+            raise ValueError(f"unknown data type: {args.data_type}")
     else:
-        raise ValueError(f'unknown data type: {args.data_type}')
+        logging.warning(f"loading data from HITL state file {args.load_state}...")
+        hitl = HITLManager.load(args.load_state)
+        extractor = hitl.extractor
+        gold_data = hitl.text_to_triplets
 
+    train_data, val_data = split_data(gold_data, args.test_size)
+    logging.warning(f'{len(train_data)=}, {len(val_data)=}')
     # training
-    logging.info("training...")
-    extractor.get_rules(gold_data)
-    
-    extractor.print_rules(console)
+    logging.warning("training...")
+    extractor.get_rules(train_data)
+
+    if args.verbose:
+        extractor.print_rules(console)
 
     # evaluation
-    logging.info("evaluating...")
-    evaluator = ExtractorEvaluator(extractor, gold_data)
+    logging.warning("evaluating...")
+    evaluator = ExtractorEvaluator(extractor, val_data)
 
     results = evaluator.get_results()
     for key, value in results.items():
         print(f"{key}: {value}")
 
+    logging.warning("writing events to file...")
     if args.events_file is not None:
         if args.events_file == "-":
             evaluator.write_events(sys.stdout)

@@ -3,12 +3,14 @@ from collections import Counter, defaultdict
 from itertools import chain
 from typing import Any, Dict, List, Optional, Tuple
 
+import networkx as nx
+from tuw_nlp.graph.ud_graph import UDGraph
+from tuw_nlp.graph.utils import GraphFormulaPatternMatcher
+from tuw_nlp.text.utils import tuple_if_list
+
 from newpotato.datatypes import GraphMappedTriplet, Triplet
 from newpotato.extractors.extractor import Extractor
 from newpotato.extractors.graph_parser_client import GraphParserClient
-
-from tuw_nlp.graph.ud_graph import UDGraph
-from tuw_nlp.graph.utils import GraphFormulaPatternMatcher
 
 
 class GraphBasedExtractor(Extractor):
@@ -18,8 +20,8 @@ class GraphBasedExtractor(Extractor):
         extractor.text_parser.check_params(data["parser_params"])
 
         extractor.parsed_graphs = {
-            text: UDGraph.from_json(graph_dict)
-            for text, graph_dict in data["parsed_graphs"].items()
+            tuple_if_list(item["text"]): UDGraph.from_json(item["graph"])
+            for item in data["parsed_graphs"]
         }
 
         return extractor
@@ -28,9 +30,10 @@ class GraphBasedExtractor(Extractor):
         # TODO learned rules are not yet saved
         data = {
             "extractor_type": "graph",
-            "parsed_graphs": {
-                text: graph.to_json() for text, graph in self.parsed_graphs.items()
-            },
+            "parsed_graphs": [
+                {"text": text, "graph": graph.to_json()}
+                for text, graph in self.parsed_graphs.items()
+            ],
             "parser_params": self.text_parser.get_params(),
         }
 
@@ -149,7 +152,7 @@ class GraphBasedExtractor(Extractor):
         self.arg_graphs_by_pred = arg_graphs_by_pred
         self.triplet_graphs = triplet_graphs
 
-    def _get_matcher_from_graphs(self, graphs, label, threshold, pos_only):
+    def _get_matcher_from_graphs(self, graphs, label, threshold):
         patterns = []
         for graph, freq in graphs.most_common():
             if freq < threshold:
@@ -169,19 +172,16 @@ class GraphBasedExtractor(Extractor):
         self._get_patterns(text_to_triplets)
         logging.info("getting rules...")
         self.pred_matcher = self._get_matcher_from_graphs(
-            self.pred_graphs, label="PRED", threshold=1, pos_only=False
-        )
+            self.pred_graphs, label="PRED", threshold=1)
         self.arg_matcher = self._get_matcher_from_graphs(
-            self.all_arg_graphs, label="ARG", threshold=1, pos_only=False
-        )
+            self.all_arg_graphs, label="ARG", threshold=1)
         self.triplet_matchers = Counter(
             {
                 (
                     self._get_matcher_from_graphs(
                         Counter({graph: count}),
                         label="TRI",
-                        threshold=1,
-                        pos_only=False,
+                        threshold=1
                     ),
                     arg_root_indices,
                     inferred_node_indices,
@@ -200,9 +200,9 @@ class GraphBasedExtractor(Extractor):
 
     def print_rules(self, console):
         console.print("[bold green]Extracted Rules:[/bold green]")
-        console.print(f"{self.pred_graphs=}")
-        console.print(f"{self.all_arg_graphs=}")
-        console.print(f"{self.triplet_graphs=}")
+        console.print(f"{self.pred_graphs.most_common(10)=}")
+        console.print(f"{self.all_arg_graphs.most_common(10)=}")
+        console.print(f"{self.triplet_graphs.most_common(10)=}")
 
     def get_n_rules(self):
         return self.n_rules
@@ -244,8 +244,8 @@ class GraphBasedExtractor(Extractor):
         logging.debug(f"triplet mapped: {arg_subgraphs=}")
         return GraphMappedTriplet(triplet, pred_subgraph, arg_subgraphs)
 
-    def _match(self, matcher, sen_graph):
-        for key, i, subgraphs in matcher.match(sen_graph.G, return_subgraphs=True):
+    def _match(self, matcher, sen_graph, attrs):
+        for key, i, subgraphs in matcher.match(sen_graph.G, return_subgraphs=True, attrs=attrs):
             for subgraph in subgraphs:
                 logging.debug(f"MATCH: {sen_graph=}")
                 logging.debug(f"MATCH: {subgraph.graph=}")
@@ -259,17 +259,17 @@ class GraphBasedExtractor(Extractor):
 
     def _infer_triplets(self, text: str):
         for sen, sen_graph in self.parse_text(text):
-            logging.info("==========================")
-            logging.info("==========================")
-            logging.info(f"{sen=}")
+            logging.debug("==========================")
+            logging.debug("==========================")
+            logging.debug(f"{sen=}")
             pred_cands = {
                 indices: subgraph
-                for indices, subgraph in self._match(self.pred_matcher, sen_graph)
+                for indices, subgraph in self._match(self.pred_matcher, sen_graph, attrs=None)
             }
-            logging.info(f"{pred_cands=}")
+            logging.debug(f"{pred_cands=}")
             arg_cands = {
                 indices: subgraph
-                for indices, subgraph in self._match(self.arg_matcher, sen_graph)
+                for indices, subgraph in self._match(self.arg_matcher, sen_graph, attrs=('upos',))
             }
             arg_roots_to_arg_cands = {
                 arg_graph.root: (indices, arg_graph)
@@ -283,42 +283,51 @@ class GraphBasedExtractor(Extractor):
                 inferred_node_indices,
             ), freq in self.triplet_matchers.most_common():
                 triplet_cands = set(
-                    indices for indices in self._match(triplet_matcher, sen_graph)
+                    indices for indices in self._match(triplet_matcher, sen_graph, attrs=('upos',))
                 )
                 for triplet_cand, triplet_graph in triplet_cands:
                     inferred_nodes = set(
                         triplet_graph.nodes_by_lextop(inferred_node_indices)
                     )
                     arg_roots = triplet_graph.nodes_by_lextop(arg_root_indices)
-                    logging.info("==========================")
-                    logging.info(f"{triplet_cand=}")
-                    logging.info(f"{triplet_graph=}")
-                    logging.info(f"{inferred_nodes=}")
-                    logging.info(f"{arg_roots=}")
+                    logging.debug("==========================")
+                    logging.debug(f"{triplet_cand=}")
+                    logging.debug(f"{triplet_graph=}")
+                    logging.debug(f"{inferred_nodes=}")
+                    logging.debug(f"{arg_roots=}")
                     for pred_cand in pred_cands:
-                        logging.info(f"{pred_cand=}")
+                        logging.debug(f"{pred_cand=}")
                         if pred_cand.issubset(triplet_cand):
                             arg_roots_to_cover = {
                                 node
                                 for node in triplet_cand - pred_cand - inferred_nodes
                             }
-                            logging.info(f"{arg_roots_to_cover=}")
-                            logging.info(f"{arg_cand_root_set=}")
+                            logging.debug(f"{arg_roots_to_cover=}")
+                            logging.debug(f"{arg_cand_root_set=}")
                             if arg_roots_to_cover.issubset(arg_cand_root_set):
-                                logging.info("FOUND ONE")
+                                logging.debug("FOUND ONE")
                                 # we have a winner
                                 if arg_roots_to_cover:
                                     args = [
                                         arg_roots_to_arg_cands[arg_root][0]
-                                        for arg_root in arg_roots
+                                        for arg_root in arg_roots_to_cover
                                     ]
                                 else:
                                     args = []
                                 triplet = Triplet(
                                     pred_cand, args, toks=sen_graph.tokens
                                 )
-                                mapped_triplet = self.map_triplet(triplet, sen)
-                                yield sen, mapped_triplet
+                                try:
+                                    mapped_triplet = self.map_triplet(triplet, sen)
+                                    yield sen, mapped_triplet
+                                except (
+                                    KeyError,
+                                    nx.exception.NetworkXPointlessConcept,
+                                ):
+                                    logging.error(
+                                        f"error mapping triplet: {triplet=}, {sen=}"
+                                    )
+                                    logging.error("skipping")
 
     def infer_triplets(self, text: str, **kwargs) -> List[Triplet]:
         triplets = sorted(set(triplet for sen, triplet in self._infer_triplets(text)))

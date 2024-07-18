@@ -71,6 +71,7 @@ def load_lsoie_to_hitl(input_file, hitl):
 def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-i", "--input_file", default=None, type=str)
     parser.add_argument("-s", "--state_file", default=None, type=str)
     return parser.parse_args()
@@ -79,10 +80,12 @@ def get_args():
 def main():
     args = get_args()
     logging.basicConfig(
+        level=logging.WARNING,
         format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
         force=True,
     )
-    logging.getLogger().setLevel(logging.INFO)
+    if args.verbose:
+        logging.getLogger().setLevel(logging.INFO)
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
