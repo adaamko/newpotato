@@ -85,6 +85,7 @@ class GraphMappedTriplet(Triplet):
         triplet = Triplet(
             data["pred"],
             data["args"],
+            data["toks"]
         )
         pred_graph = (
             UDGraph.from_json(data["pred_graph"])
@@ -106,6 +107,7 @@ class GraphMappedTriplet(Triplet):
         return {
             "pred": self.pred,
             "args": self.args,
+            "toks": self.toks,
             "pred_graph": self.pred_graph.to_json()
             if self.pred_graph is not None
             else None,

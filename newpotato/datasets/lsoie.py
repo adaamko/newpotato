@@ -29,6 +29,8 @@ def load_and_map_lsoie(input_file, extractor):
                 continue
 
             sentence, graph = text_to_graph[0]
+            logging.debug(f'{sentence=}, {graph=}')
+            logging.debug(graph.to_dot())
 
             arg_dict = defaultdict(list)
             pred = []
