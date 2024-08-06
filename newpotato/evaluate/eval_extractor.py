@@ -1,9 +1,10 @@
 import argparse
 import logging
-import sys
+import os
 from collections import defaultdict
 
 from rich.console import Console
+from tuw_nlp.common.utils import ensure_dir
 
 from newpotato.datasets.food_disease import load_and_map_fd
 from newpotato.datasets.lsoie import load_and_map_lsoie
@@ -42,7 +43,7 @@ def get_args():
     parser.add_argument("-l", "--load_state", default=None, type=str)
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("-e", "--events_file", default=None, type=str)
+    parser.add_argument("-o", "--log_dir", default=None, type=str)
     parser.add_argument("-r", "--which_rel", default=None, type=str)
     return parser.parse_args()
 
@@ -58,6 +59,9 @@ def main():
         logging.getLogger().setLevel(logging.INFO)
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    ensure_dir(args.log_dir)
+    print(f'logging to directory {args.log_dir}')
 
     console = Console()
     if args.load_state is None:
@@ -96,15 +100,18 @@ def main():
     evaluator = ExtractorEvaluator(extractor, val_data)
 
     results = evaluator.get_results()
-    for key, value in results.items():
-        print(f"{key}: {value}")
 
-    logging.warning("writing events to file...")
-    if args.events_file is not None:
-        if args.events_file == "-":
-            evaluator.write_events(sys.stdout)
-        else:
-            evaluator.write_events_to_file(args.events_file)
+    results_file = os.path.join(args.log_dir, 'results.txt')
+    logging.warning(f"writing results to {results_file}...")
+    with open(results_file, 'w') as rf:
+        for key, value in results.items():
+            line = f"{key}: {value}"
+            print(line)
+            rf.write(f'{line}\n')
+
+    events_file = os.path.join(args.log_dir, 'events.tsv')
+    logging.warning(f"writing events to {events_file}...")
+    evaluator.write_events_to_file(events_file)
 
 
 if __name__ == "__main__":
