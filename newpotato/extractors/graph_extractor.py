@@ -1,3 +1,4 @@
+import json
 import logging
 from collections import Counter, defaultdict
 from itertools import chain
@@ -28,7 +29,7 @@ class GraphBasedExtractor(Extractor):
 
     def to_json(self) -> Dict[str, Any]:
         # TODO learned rules are not yet saved
-        data = {
+        return {
             "extractor_type": "graph",
             "parsed_graphs": [
                 {"text": text, "graph": graph.to_json()}
@@ -37,7 +38,42 @@ class GraphBasedExtractor(Extractor):
             "parser_params": self.text_parser.get_params(),
         }
 
-        return data
+    def save(self, fn: str):
+        with open(fn, "w") as f:
+            f.write(json.dumps(self.to_json()))
+
+    def _triplet_patterns_to_json(self, graphs):
+        return [
+            {
+                "pattern": pattern[0].to_penman(),
+                "arg_roots": pattern[1],
+                "inferred_nodes": pattern[2],
+                "count": count,
+            }
+            for pattern, count in graphs.items()
+        ]
+
+    def _patterns_to_json(self, graphs):
+        return {graph.to_penman(): count for graph, count in graphs.most_common()}
+
+    def patterns_to_json(self):
+        return {
+            "pred_graphs": self._patterns_to_json(self.pred_graphs),
+            "all_arg_graphs": self._patterns_to_json(self.all_arg_graphs),
+            "arg_graphs_by_pred": {
+                " ".join(pred): self._patterns_to_json(arg_graphs)
+                for pred, arg_graphs in self.arg_graphs_by_pred.items()
+            },
+            "triplet_graphs": self._triplet_patterns_to_json(self.triplet_graphs),
+            "triplet_graphs_by_pred": {
+                " ".join(pred): self._triplet_patterns_to_json(tr_graphs)
+                for pred, tr_graphs in self.triplet_graphs_by_pred.items()
+            },
+        }
+
+    def save_patterns(self, fn: str):
+        with open(fn, "w") as f:
+            f.write(json.dumps(self.patterns_to_json(), indent=4))
 
     def __init__(
         self,
@@ -227,9 +263,9 @@ class GraphBasedExtractor(Extractor):
 
     def print_rules(self, console):
         console.print("[bold green]Extracted Rules:[/bold green]")
-        console.print(f"{self.pred_graphs.most_common(1000)=}")
-        console.print(f"{self.all_arg_graphs.most_common(10)=}")
-        console.print(f"{self.triplet_graphs.most_common(10)=}")
+        console.print(f"{self.pred_graphs.most_common(50)=}")
+        console.print(f"{self.all_arg_graphs.most_common(50)=}")
+        console.print(f"{self.triplet_graphs.most_common(50)=}")
 
     def get_n_rules(self):
         return self.n_rules

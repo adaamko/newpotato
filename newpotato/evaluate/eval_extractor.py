@@ -43,7 +43,7 @@ def get_args():
     parser.add_argument("-l", "--load_state", default=None, type=str)
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("-o", "--log_dir", default=None, type=str)
+    parser.add_argument("-o", "--output_dir", default=None, type=str)
     parser.add_argument("-r", "--which_rel", default=None, type=str)
     return parser.parse_args()
 
@@ -60,13 +60,13 @@ def main():
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    ensure_dir(args.log_dir)
-    print(f'logging to directory {args.log_dir}')
+    ensure_dir(args.output_dir)
+    print(f"logging to directory {args.output_dir}")
 
     console = Console()
     if args.load_state is None:
         extractor = GraphBasedExtractor(default_relation=args.which_rel)
-        logging.warning(f"loading gold data from {args.input_file=}...")
+        logging.warning(f"loading gold data from {args.input_file=}")
         if args.data_type == "fd":
             gold_data = {
                 sen: [(triplet, True) for triplet in triplets]
@@ -81,13 +81,13 @@ def main():
         else:
             raise ValueError(f"unknown data type: {args.data_type}")
     else:
-        logging.warning(f"loading data from HITL state file {args.load_state}...")
+        logging.warning(f"loading data from HITL state file {args.load_state}")
         hitl = HITLManager.load(args.load_state)
         extractor = hitl.extractor
         gold_data = hitl.text_to_triplets
 
     train_data, val_data = split_data(gold_data, args.test_size)
-    logging.warning(f'{len(train_data)=}, {len(val_data)=}')
+    logging.warning(f"{len(train_data)=}, {len(val_data)=}")
     # training
     logging.warning("training...")
     extractor.get_rules(train_data)
@@ -101,17 +101,21 @@ def main():
 
     results = evaluator.get_results()
 
-    results_file = os.path.join(args.log_dir, 'results.txt')
-    logging.warning(f"writing results to {results_file}...")
-    with open(results_file, 'w') as rf:
+    results_file = os.path.join(args.output_dir, "results.txt")
+    logging.warning(f"writing results to {results_file}")
+    with open(results_file, "w") as rf:
         for key, value in results.items():
             line = f"{key}: {value}"
             print(line)
-            rf.write(f'{line}\n')
+            rf.write(f"{line}\n")
 
-    events_file = os.path.join(args.log_dir, 'events.tsv')
-    logging.warning(f"writing events to {events_file}...")
+    events_file = os.path.join(args.output_dir, "events.tsv")
+    logging.warning(f"writing events to {events_file}")
     evaluator.write_events_to_file(events_file)
+
+    patterns_file = os.path.join(args.output_dir, "patterns.json")
+    logging.warning(f"writing patterns to {patterns_file}")
+    extractor.save_patterns(patterns_file)
 
 
 if __name__ == "__main__":
