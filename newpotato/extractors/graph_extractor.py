@@ -5,6 +5,7 @@ from itertools import chain
 from typing import Any, Dict, List, Optional, Tuple
 
 import networkx as nx
+from tuw_nlp.graph.graph import Graph
 from tuw_nlp.graph.ud_graph import UDGraph
 from tuw_nlp.graph.utils import GraphFormulaPatternMatcher
 from tuw_nlp.text.utils import tuple_if_list
@@ -42,19 +43,36 @@ class GraphBasedExtractor(Extractor):
         with open(fn, "w") as f:
             f.write(json.dumps(self.to_json()))
 
+    def _patterns_from_json(self, patterns):
+        return Counter(
+            {Graph.from_penman(pn_graph, node_attr="name|upos"): count for pn_graph, count in patterns.items()}
+        )
+
+    def _patterns_to_json(self, graphs):
+        return {graph.to_penman(name_attr="name|upos"): count for graph, count in graphs.most_common()}
+
+    def _triplet_patterns_from_json(self, patterns):
+        return Counter(
+            {
+                (
+                    Graph.from_penman(p["pattern"], node_attr="name|upos"),
+                    tuple(p["arg_roots"]),
+                    tuple(p["inferred_nodes"]),
+                ): p["count"]
+                for p in patterns
+            }
+        )
+
     def _triplet_patterns_to_json(self, graphs):
         return [
             {
-                "pattern": pattern[0].to_penman(),
+                "pattern": pattern[0].to_penman(name_attr="name|upos"),
                 "arg_roots": pattern[1],
                 "inferred_nodes": pattern[2],
                 "count": count,
             }
             for pattern, count in graphs.items()
         ]
-
-    def _patterns_to_json(self, graphs):
-        return {graph.to_penman(): count for graph, count in graphs.most_common()}
 
     def patterns_to_json(self):
         return {
@@ -70,6 +88,23 @@ class GraphBasedExtractor(Extractor):
                 for pred, tr_graphs in self.triplet_graphs_by_pred.items()
             },
         }
+
+    def load_patterns(self, fn: str):
+        with open(fn) as f:
+            d = json.load(f)
+
+        self.pred_graphs = self._patterns_from_json(d["pred_graphs"])
+        self.all_arg_graphs = self._patterns_from_json(d["all_arg_graphs"])
+        self.arg_graphs_by_pred = {
+            tuple(pred.split(" ")): self._patterns_from_json(arg_patterns)
+            for pred, arg_patterns in d["arg_graphs_by_pred"].items()
+        }
+        self.triplet_graphs = self._triplet_patterns_from_json(d["triplet_graphs"])
+        self.triplet_graphs_by_pred = {
+            tuple(pred.split(" ")): self._triplet_patterns_from_json(tr_patterns)
+            for pred, tr_patterns in d["triplet_graphs_by_pred"].items()
+        }
+        self._get_matchers()
 
     def save_patterns(self, fn: str):
         with open(fn, "w") as f:
@@ -195,7 +230,7 @@ class GraphBasedExtractor(Extractor):
         for graph, freq in graphs.most_common():
             if freq < threshold:
                 break
-            if isinstance(graph, UDGraph):
+            if isinstance(graph, Graph):
                 patterns.append(((graph.G,), (), label))
             else:
                 patterns.append(((graph[0].G,), (), label))
@@ -244,10 +279,7 @@ class GraphBasedExtractor(Extractor):
             for pred_lemmas, triplet_graph_counter in self.triplet_graphs_by_pred.items()
         }
 
-    def get_rules(self, text_to_triplets, **kwargs):
-        logging.info("collecting patterns...")
-        self._get_patterns(text_to_triplets)
-        logging.info("getting rules...")
+    def _get_matchers(self):
         self.pred_matcher = self._get_matcher_from_graphs(
             self.pred_graphs, label="PRED", threshold=1
         )
@@ -257,6 +289,12 @@ class GraphBasedExtractor(Extractor):
         self.triplet_matchers = self._get_triplet_matchers()
         self.triplet_matchers_by_pred = self._get_triplet_matchers_by_pred()
         self.n_rules = len(self.pred_matcher.patts)
+
+    def get_rules(self, text_to_triplets, **kwargs):
+        logging.info("collecting patterns...")
+        self._get_patterns(text_to_triplets)
+        logging.info("getting rules...")
+        self._get_matchers()
 
         self._is_trained = True
         return [graph for (graph, _, __), ___ in self.triplet_graphs.most_common(20)]
