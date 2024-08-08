@@ -64,7 +64,8 @@ def get_single_triplet_from_user(sentence, extractor, console, expect_mappable=T
             return "O"
 
         pred, args = raw_triplet
-        triplet = Triplet(pred, args)
+        graph = extractor.parsed_graphs[sentence]
+        triplet = Triplet(pred, args, toks=graph.tokens)
         mapped_triplet = extractor.map_triplet(triplet, sentence)
         if expect_mappable and mapped_triplet is False:
             console.print(

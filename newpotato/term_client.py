@@ -42,6 +42,20 @@ class NPTerminalClient:
                 )
                 return
 
+    def write_patterns_to_file(self):
+        while True:
+            console.print("[bold cyan]Enter path to patterns file:[/bold cyan]")
+            fn = input("> ")
+            try:
+                self.hitl.extractor.save_patterns(fn)
+            except FileNotFoundError:
+                console.print(f"[bold red] No such file or directory: {fn}[/bold red]")
+            else:
+                console.print(
+                    f"[bold cyan]Successfully saved extractor patterns to {fn}[/bold cyan]"
+                )
+                return
+
     def write_to_file(self):
         while True:
             console.print("[bold cyan]Enter path to HITL state file:[/bold cyan]")
@@ -206,7 +220,7 @@ class NPTerminalClient:
         while True:
             self.print_status()
             console.print(
-                "[bold cyan]Choose an action:\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(R)ules\n\t(S)uggest\n\t(I)nference\n\t(E)valuate\n\t(L)oad\n\t(W)rite\n\t(C)lear\n\t(Q)uit\n\t(H)elp[/bold cyan]"
+                "[bold cyan]Choose an action:\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(R)ules\n\t(S)uggest\n\t(I)nference\n\t(E)valuate\n\t(L)oad\n\t(W)rite\n\t(P)atterns\n\t(C)lear\n\t(Q)uit\n\t(H)elp[/bold cyan]"
             )
             choice = input("> ").upper()
             if choice in ("S", "I") and not self.hitl.extractor.is_trained:
@@ -231,6 +245,8 @@ class NPTerminalClient:
                 self.load_from_file()
             elif choice == "W":
                 self.write_to_file()
+            elif choice == "P":
+                self.write_patterns_to_file()
             elif choice == "C":
                 self.clear_console()
             elif choice == "Q":
@@ -248,6 +264,7 @@ class NPTerminalClient:
                     + "\t(E)valuate: Evaluate rules on annotated sentences\n"
                     + "\t(L)oad: Load HITL state from file\n"
                     + "\t(W)rite: Write HITL state to file\n"
+                    + "\t(P)atterns: Write extractor patterns to file\n"
                     + "\t(C)lear: Clear the console\n"
                     + "\t(Q)uit: Exit the program\n"
                     + "\t(H)elp: Show this help message\n"
