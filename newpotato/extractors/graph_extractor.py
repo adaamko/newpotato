@@ -45,11 +45,17 @@ class GraphBasedExtractor(Extractor):
 
     def _patterns_from_json(self, patterns):
         return Counter(
-            {Graph.from_penman(pn_graph, node_attr="name|upos"): count for pn_graph, count in patterns.items()}
+            {
+                Graph.from_penman(pn_graph, node_attr="name|upos"): count
+                for pn_graph, count in patterns.items()
+            }
         )
 
     def _patterns_to_json(self, graphs):
-        return {graph.to_penman(name_attr="name|upos"): count for graph, count in graphs.most_common()}
+        return {
+            graph.to_penman(name_attr="name|upos"): count
+            for graph, count in graphs.most_common()
+        }
 
     def _triplet_patterns_from_json(self, patterns):
         return Counter(
@@ -338,7 +344,7 @@ class GraphBasedExtractor(Extractor):
 
         arg_subgraphs = [
             graph.subgraph(arg, handle_unconnected="shortest_path")
-            if len(arg) > 0
+            if arg is not None and len(arg) > 0
             else None
             for arg in triplet.args
         ]
@@ -360,84 +366,26 @@ class GraphBasedExtractor(Extractor):
                 yield indices, ud_subgraph
 
     def _get_arg_cands(self, sen_graph):
-        arg_cands = {
-            indices: subgraph
+        arg_roots_to_arg_cands = {
+            subgraph.root: (indices, subgraph)
             for indices, subgraph in self._match(
                 self.arg_matcher, sen_graph, attrs=("upos",)
             )
         }
-        arg_roots_to_arg_cands = {
-            arg_graph.root: (indices, arg_graph)
-            for indices, arg_graph in arg_cands.items()
-        }
-        arg_cand_root_set = set(arg_roots_to_arg_cands.keys())
+        return arg_roots_to_arg_cands
 
-        return arg_cands, arg_roots_to_arg_cands, arg_cand_root_set
-
-    def _gen_raw_triplets_for_preds_lexical(self, sen, sen_graph, pred_cands):
-        arg_cands, arg_roots_to_arg_cands, arg_cand_root_set = self._get_arg_cands(
-            sen_graph
-        )
-
-        for pred_cand in pred_cands:
-            logging.debug(f"{pred_cand=}")
-            pred_lemmas = tuple(sen_graph.G.nodes[i]["name"] for i in pred_cand)
-            logging.debug(f"{pred_lemmas=}")
-            if pred_lemmas not in self.triplet_matchers_by_pred:
-                logging.debug("unknown pred lemmas, skipping")
-                continue
-            triplet_matchers = self.triplet_matchers_by_pred[pred_lemmas]
-
-            for (
-                triplet_matcher,
-                arg_root_indices,
-                inferred_node_indices,
-            ), freq in triplet_matchers.most_common():
-                triplet_cands = set(
-                    indices
-                    for indices in self._match(
-                        triplet_matcher, sen_graph, attrs=("upos",)
-                    )
-                )
-                for triplet_cand, triplet_graph in triplet_cands:
-                    inferred_nodes = set(
-                        triplet_graph.nodes_by_lextop(inferred_node_indices)
-                    )
-                    arg_roots = triplet_graph.nodes_by_lextop(arg_root_indices)
-                    logging.debug("==========================")
-                    logging.debug(f"{triplet_cand=}")
-                    logging.debug(f"{triplet_graph=}")
-                    logging.debug(f"{inferred_nodes=}")
-                    logging.debug(f"{arg_roots=}")
-                    if pred_cand.issubset(triplet_cand):
-                        arg_roots_to_cover = {
-                            node for node in triplet_cand - pred_cand - inferred_nodes
-                        }
-                        logging.debug(f"{arg_roots_to_cover=}")
-                        logging.debug(f"{arg_cand_root_set=}")
-                        if arg_roots_to_cover.issubset(arg_cand_root_set):
-                            logging.debug("FOUND ONE")
-                            # we have a winner
-                            if arg_roots_to_cover:
-                                args = [
-                                    arg_roots_to_arg_cands[arg_root][0]
-                                    for arg_root in arg_roots_to_cover
-                                ]
-                            else:
-                                args = []
-
-                            yield pred_cand, args
-
-    def _gen_raw_triplets_for_preds_non_lexical(self, sen, sen_graph, pred_cands):
-        arg_cands, arg_roots_to_arg_cands, arg_cand_root_set = self._get_arg_cands(
-            sen_graph
-        )
+    def _gen_raw_triplets(
+        self, sen, sen_graph, pred_cands, arg_roots_to_arg_cands, triplet_matchers=None
+    ):
+        if triplet_matchers is None:
+            triplet_matchers = self.triplet_matchers
 
         for (
             triplet_matcher,
             arg_root_indices,
             inferred_node_indices,
-        ), freq in self.triplet_matchers.most_common():
+        ), freq in triplet_matchers.most_common():
+
             triplet_cands = set(
                 indices
                 for indices in self._match(triplet_matcher, sen_graph, attrs=("upos",))
@@ -453,27 +401,51 @@ class GraphBasedExtractor(Extractor):
                 logging.debug(f"{inferred_nodes=}")
                 logging.debug(f"{arg_roots=}")
                 for pred_cand in pred_cands:
-                    logging.debug(f"{pred_cand=}")
-                    if pred_cand.issubset(triplet_cand):
-                        arg_roots_to_cover = {
-                            node for node in triplet_cand - pred_cand - inferred_nodes
-                        }
-                        logging.debug(f"{arg_roots_to_cover=}")
-                        logging.debug(f"{arg_cand_root_set=}")
-                        if arg_roots_to_cover.issubset(arg_cand_root_set):
-                            logging.debug("FOUND ONE")
-                            # we have a winner
-                            if arg_roots_to_cover:
-                                args = [
-                                    arg_roots_to_arg_cands[arg_root][0]
-                                    for arg_root in arg_roots_to_cover
-                                ]
-                            else:
-                                args = []
+                    if not pred_cand.issubset(triplet_cand):
+                        return
+                    covered_args = triplet_cand - pred_cand - inferred_nodes
+                    args = [
+                        arg_roots_to_arg_cands[arg_root][0]
+                        if arg_root in covered_args
+                        else None
+                        for arg_root in arg_roots
+                    ]
+                    partial = any(arg is None for arg in args)
+                    yield pred_cand, args, partial
 
-                            yield pred_cand, args
+    def _gen_raw_triplets_lexical(
+        self, sen, sen_graph, pred_cands, arg_roots_to_arg_cands
+    ):
+        for pred_cand in pred_cands:
+            logging.debug(f"{pred_cand=}")
+            pred_lemmas = tuple(sen_graph.G.nodes[i]["name"] for i in pred_cand)
+            logging.debug(f"{pred_lemmas=}")
+            if pred_lemmas not in self.triplet_matchers_by_pred:
+                logging.debug("unknown pred lemmas, skipping")
+                continue
+            triplet_matchers = self.triplet_matchers_by_pred[pred_lemmas]
 
-    def _infer_triplets(self, text: str, lexical=True):
+            yield from self._gen_raw_triplets(
+                sen,
+                sen_graph,
+                (pred_cand,),
+                arg_roots_to_arg_cands,
+                triplet_matchers=triplet_matchers,
+            )
+
+    def gen_raw_triplets(
+        self, sen, sen_graph, pred_cands, arg_roots_to_arg_cands, lexical
+    ):
+        if lexical:
+            yield from self._gen_raw_triplets_lexical(
+                sen, sen_graph, pred_cands, arg_roots_to_arg_cands
+            )
+        else:
+            yield from self._gen_raw_triplets(
+                sen, sen_graph, pred_cands, arg_roots_to_arg_cands
+            )
+
+    def _infer_triplets(self, text: str, lexical=False, include_partial=True):
         for sen, sen_graph in self.parse_text(text):
             logging.debug("==========================")
             logging.debug("==========================")
@@ -486,16 +458,14 @@ class GraphBasedExtractor(Extractor):
             }
             logging.debug(f"{pred_cands=}")
 
-            if lexical:
-                raw_triplet_generator = self._gen_raw_triplets_for_preds_lexical(
-                    sen, sen_graph, pred_cands
-                )
-            else:
-                raw_triplet_generator = self._gen_raw_triplets_for_preds_non_lexical(
-                    sen, sen_graph, pred_cands
-                )
+            arg_roots_to_arg_cands = self._get_arg_cands(sen_graph)
+            logging.debug(f"{arg_roots_to_arg_cands=}")
 
-            for pred_cand, args in raw_triplet_generator:
+            for pred_cand, args, is_partial in self.gen_raw_triplets(
+                sen, sen_graph, pred_cands, arg_roots_to_arg_cands, lexical=lexical
+            ):
+                if not include_partial and is_partial:
+                    continue
                 triplet = Triplet(pred_cand, args, toks=sen_graph.tokens)
                 try:
                     mapped_triplet = self.map_triplet(triplet, sen)
