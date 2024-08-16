@@ -375,7 +375,13 @@ class GraphBasedExtractor(Extractor):
         return arg_roots_to_arg_cands
 
     def _gen_raw_triplets(
-        self, sen, sen_graph, pred_cands, arg_roots_to_arg_cands, triplet_matchers=None
+        self,
+        sen,
+        sen_graph,
+        pred_cands,
+        arg_roots_to_arg_cands,
+        include_partial,
+        triplet_matchers=None,
     ):
         if triplet_matchers is None:
             triplet_matchers = self.triplet_matchers
@@ -411,10 +417,22 @@ class GraphBasedExtractor(Extractor):
                         for arg_root in arg_roots
                     ]
                     partial = any(arg is None for arg in args)
-                    yield pred_cand, args, partial
+                    if partial and not include_partial:
+                        continue
+                    triplet = Triplet(pred_cand, args, toks=sen_graph.tokens)
+                    try:
+                        mapped_triplet = self.map_triplet(triplet, sen)
+                        logging.info(f"inferring triplet: {triplet=}")
+                        yield sen, mapped_triplet
+                    except (
+                        KeyError,
+                        nx.exception.NetworkXPointlessConcept,
+                    ):
+                        logging.error(f"error mapping triplet: {triplet=}, {sen=}")
+                        logging.error("skipping")
 
     def _gen_raw_triplets_lexical(
-        self, sen, sen_graph, pred_cands, arg_roots_to_arg_cands
+        self, sen, sen_graph, pred_cands, arg_roots_to_arg_cands, include_partial
     ):
         for pred_cand in pred_cands:
             logging.debug(f"{pred_cand=}")
@@ -430,11 +448,18 @@ class GraphBasedExtractor(Extractor):
                 sen_graph,
                 (pred_cand,),
                 arg_roots_to_arg_cands,
+                include_partial=include_partial,
                 triplet_matchers=triplet_matchers,
             )
 
     def gen_raw_triplets(
-        self, sen, sen_graph, pred_cands, arg_roots_to_arg_cands, lexical
+        self,
+        sen,
+        sen_graph,
+        pred_cands,
+        arg_roots_to_arg_cands,
+        lexical,
+        include_partial,
     ):
         if lexical:
             yield from self._gen_raw_triplets_lexical(
@@ -442,7 +467,11 @@ class GraphBasedExtractor(Extractor):
             )
         else:
             yield from self._gen_raw_triplets(
-                sen, sen_graph, pred_cands, arg_roots_to_arg_cands
+                sen,
+                sen_graph,
+                pred_cands,
+                arg_roots_to_arg_cands,
+                include_partial=include_partial,
             )
 
     def _infer_triplets(self, text: str, lexical=False, include_partial=True):
@@ -461,21 +490,14 @@ class GraphBasedExtractor(Extractor):
             arg_roots_to_arg_cands = self._get_arg_cands(sen_graph)
             logging.debug(f"{arg_roots_to_arg_cands=}")
 
-            for pred_cand, args, is_partial in self.gen_raw_triplets(
-                sen, sen_graph, pred_cands, arg_roots_to_arg_cands, lexical=lexical
-            ):
-                if not include_partial and is_partial:
-                    continue
-                triplet = Triplet(pred_cand, args, toks=sen_graph.tokens)
-                try:
-                    mapped_triplet = self.map_triplet(triplet, sen)
-                    yield sen, mapped_triplet
-                except (
-                    KeyError,
-                    nx.exception.NetworkXPointlessConcept,
-                ):
-                    logging.error(f"error mapping triplet: {triplet=}, {sen=}")
-                    logging.error("skipping")
+            yield from self.gen_raw_triplets(
+                sen,
+                sen_graph,
+                pred_cands,
+                arg_roots_to_arg_cands,
+                lexical=lexical,
+                include_partial=include_partial,
+            )
 
     def infer_triplets(self, text: str, **kwargs) -> List[Triplet]:
         triplets = sorted(set(triplet for sen, triplet in self._infer_triplets(text)))
