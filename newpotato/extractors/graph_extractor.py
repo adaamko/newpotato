@@ -93,6 +93,10 @@ class GraphBasedExtractor(Extractor):
                 " ".join(pred): self._triplet_patterns_to_json(tr_graphs)
                 for pred, tr_graphs in self.triplet_graphs_by_pred.items()
             },
+            "patterns_to_sens": {
+                graph.to_penman(name_attr="name|upos"): [text for text in sorted(texts)]
+                for graph, texts in self.patterns_to_sens.items()
+            },
         }
 
     def load_patterns(self, fn: str):
@@ -111,6 +115,11 @@ class GraphBasedExtractor(Extractor):
             for pred, tr_patterns in d["triplet_graphs_by_pred"].items()
         }
         self._get_matchers()
+
+        self.patterns_to_sens = {
+            Graph.from_penman(pn_graph, node_attr="name|upos"): set(sens)
+            for pn_graph, sens in d["patterns_to_sens"].items()
+        }
 
     def save_patterns(self, fn: str):
         with open(fn, "w") as f:
@@ -166,6 +175,7 @@ class GraphBasedExtractor(Extractor):
         return [w.lemma for w in self.parsed_graphs[sen].stanza_sen.words]
 
     def _get_patterns(self, text_to_triplets):
+        patterns_to_sens = defaultdict(set)
         pred_graphs = Counter()
         triplet_graphs = Counter()
         triplet_graphs_by_pred = defaultdict(Counter)
@@ -182,16 +192,20 @@ class GraphBasedExtractor(Extractor):
                 if triplet.pred is not None:
                     logging.debug(f"{triplet.pred_graph=}")
                     pred_graphs[triplet.pred_graph] += 1
+                    patterns_to_sens[triplet.pred_graph].add(text)
                     pred_lemmas = tuple(lemmas[i] for i in triplet.pred)
-                    triplet_toks = set(chain(triplet.pred, triplet.arg_roots))
+                    # triplet_toks = set(chain(triplet.pred, triplet.arg_roots))
+                    triplet_toks = set(chain(triplet.pred, *triplet.args))
                 else:
                     pred_lemmas = (self.default_relation,)
-                    triplet_toks = set(triplet.arg_roots)
+                    # triplet_toks = set(triplet.arg_roots)
+                    triplet_toks = set(chain(*triplet.args))
 
                 for arg_graph in triplet.arg_graphs:
                     logging.debug(f"{arg_graph=}")
                     arg_graphs_by_pred[pred_lemmas][arg_graph] += 1
                     all_arg_graphs[arg_graph] += 1
+                    patterns_to_sens[arg_graph].add(text)
 
                 logging.debug(f"{triplet_toks=}")
 
@@ -209,7 +223,7 @@ class GraphBasedExtractor(Extractor):
                 )
                 triplet_graphs[pattern_key] += 1
                 triplet_graphs_by_pred[pred_lemmas][pattern_key] += 1
-
+                patterns_to_sens[triplet_graph].add(text)
                 logging.debug(f"{triplet_graph=}")
 
                 if triplet.pred is None:
@@ -230,6 +244,7 @@ class GraphBasedExtractor(Extractor):
         self.arg_graphs_by_pred = arg_graphs_by_pred
         self.triplet_graphs = triplet_graphs
         self.triplet_graphs_by_pred = triplet_graphs_by_pred
+        self.patterns_to_sens = patterns_to_sens
 
     def _get_matcher_from_graphs(self, graphs, label, threshold):
         patterns = []
@@ -255,6 +270,7 @@ class GraphBasedExtractor(Extractor):
                     ),
                     arg_root_indices,
                     inferred_node_indices,
+                    graph,
                 ): count
                 for (
                     graph,
@@ -274,6 +290,7 @@ class GraphBasedExtractor(Extractor):
                         ),
                         arg_root_indices,
                         inferred_node_indices,
+                        graph,
                     ): count
                     for (
                         graph,
@@ -366,12 +383,17 @@ class GraphBasedExtractor(Extractor):
                 yield indices, ud_subgraph
 
     def _get_arg_cands(self, sen_graph):
-        arg_roots_to_arg_cands = {
-            subgraph.root: (indices, subgraph)
-            for indices, subgraph in self._match(
-                self.arg_matcher, sen_graph, attrs=("upos",)
-            )
-        }
+        roots_to_cands_by_indices = defaultdict(dict)
+        for indices, subgraph in self._match(
+            self.arg_matcher, sen_graph, attrs=("upos",)
+        ):
+            roots_to_cands_by_indices[subgraph.root][indices] = subgraph
+
+        arg_roots_to_arg_cands = {}
+        for root, cands in roots_to_cands_by_indices.items():
+            largest = max(cands.keys(), key=len)
+            arg_roots_to_arg_cands[root] = (largest, cands[largest])
+
         return arg_roots_to_arg_cands
 
     def _gen_raw_triplets(
@@ -390,6 +412,7 @@ class GraphBasedExtractor(Extractor):
             triplet_matcher,
             arg_root_indices,
             inferred_node_indices,
+            patt_graph,
         ), freq in triplet_matchers.most_common():
 
             triplet_cands = set(
@@ -422,7 +445,11 @@ class GraphBasedExtractor(Extractor):
                     triplet = Triplet(pred_cand, args, toks=sen_graph.tokens)
                     try:
                         mapped_triplet = self.map_triplet(triplet, sen)
-                        logging.info(f"inferring triplet: {triplet=}")
+                        logging.info(f"inferring this triplet: {triplet}")
+                        logging.info(f"based on this pattern: {patt_graph.to_penman()}")
+                        logging.info(
+                            f"sentences with this pattern: {self.patterns_to_sens[patt_graph]}"
+                        )
                         yield sen, mapped_triplet
                     except (
                         KeyError,
@@ -474,7 +501,7 @@ class GraphBasedExtractor(Extractor):
                 include_partial=include_partial,
             )
 
-    def _infer_triplets(self, text: str, lexical=False, include_partial=True):
+    def _infer_triplets(self, text: str, lexical=False, include_partial=False):
         for sen, sen_graph in self.parse_text(text):
             logging.debug("==========================")
             logging.debug("==========================")
