@@ -434,7 +434,7 @@ class GraphBasedExtractor(Extractor):
                         return
                     covered_args = triplet_cand - pred_cand - inferred_nodes
                     args = [
-                        arg_roots_to_arg_cands[arg_root][0]
+                        sorted(arg_roots_to_arg_cands[arg_root][0])
                         if arg_root in covered_args
                         else None
                         for arg_root in arg_roots
