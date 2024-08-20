@@ -51,10 +51,12 @@ class GraphParserClient:
         return graph
 
     def parse(self, text):
+        logging.debug(f"got: {text=}")
         response = requests.request(
             "POST", f"{self.url}/parse", json={"text": text, "pretokenized": ()}
         ).json()
         graph_cls = get_graph_cls(response["graph_type"])
         json_graphs = response["graphs"]
         graphs = [graph_cls.from_json(graph) for graph in json_graphs]
+        logging.debug(f"returning {graphs=}")
         return graphs

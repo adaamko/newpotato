@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from collections import Counter, defaultdict
 from itertools import chain
 from typing import Any, Dict, List, Optional, Tuple
@@ -446,7 +447,9 @@ class GraphBasedExtractor(Extractor):
                     try:
                         mapped_triplet = self.map_triplet(triplet, sen)
                         logging.info(f"inferring this triplet: {triplet}")
-                        logging.info(f"based on this pattern: {patt_graph.to_penman()}")
+                        logging.info(
+                            f"based on this pattern: {patt_graph.to_penman(name_attr='name|upos')}"
+                        )
                         logging.info(
                             f"sentences with this pattern: {self.patterns_to_sens[patt_graph]}"
                         )
@@ -456,6 +459,7 @@ class GraphBasedExtractor(Extractor):
                         nx.exception.NetworkXPointlessConcept,
                     ):
                         logging.error(f"error mapping triplet: {triplet=}, {sen=}")
+                        logging.error(traceback.format_exc())
                         logging.error("skipping")
 
     def _gen_raw_triplets_lexical(
@@ -529,3 +533,20 @@ class GraphBasedExtractor(Extractor):
     def infer_triplets(self, text: str, **kwargs) -> List[Triplet]:
         triplets = sorted(set(triplet for sen, triplet in self._infer_triplets(text)))
         return triplets
+
+
+if __name__ == "__main__":
+    # for testing
+    logging.basicConfig(
+        # level=logging.DEBUG,
+        level=logging.WARNING,
+        format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
+        force=True,
+    )
+    import sys
+
+    extractor = GraphBasedExtractor()
+    extractor.load_patterns(sys.argv[1])
+    text = sys.stdin.read().strip()
+    for sen, triplet in extractor._infer_triplets(text):
+        print(f"{sen}\t{triplet}")
