@@ -53,17 +53,23 @@ class Triplet:
     def _as_tuple(self):
         return (self.pred, self.args)
 
-    def to_str(self, toks):
-        pred_phrase = "" if self.pred is None else "_".join(toks[a] for a in self.pred)
-        args_str = ", ".join(
-            "_".join(toks[a] for a in phrase) if phrase is not None else "None"
+    def str_pred(self):
+        return "" if self.pred is None else "_".join(self.toks[a] for a in self.pred)
+
+    def str_args(self):
+        return [
+            "_".join(self.toks[a] for a in phrase) if phrase is not None else "None"
             for phrase in self.args
-        )
+        ]
+
+    def to_str(self):
+        pred_phrase = self.str_pred()
+        args_str = ", ".join(self.str_args())
         return f"{pred_phrase}({args_str})"
 
     def __str__(self):
         if self.toks:
-            return self.to_str(self.toks)
+            return self.to_str()
         else:
             return f"{self.pred=}, {self.args=}"
 
@@ -82,11 +88,7 @@ class GraphMappedTriplet(Triplet):
 
     @staticmethod
     def from_json(data):
-        triplet = Triplet(
-            data["pred"],
-            data["args"],
-            data["toks"]
-        )
+        triplet = Triplet(data["pred"], data["args"], data["toks"])
         pred_graph = (
             UDGraph.from_json(data["pred_graph"])
             if data["pred_graph"] is not None
@@ -102,7 +104,7 @@ class GraphMappedTriplet(Triplet):
     @property
     def arg_roots(self):
         return [a_graph.root for a_graph in self.arg_graphs]
-    
+
     def to_json(self):
         return {
             "pred": self.pred,
