@@ -57,6 +57,9 @@ class Extractor:
     def _parse_text(self, text, **kwargs):
         raise NotImplementedError
 
+    def _parse_sen_tuple(self, sen_tuple, **kwargs):
+        raise NotImplementedError
+
     def parse_text(self, text, **kwargs):
         if text in self.parsed_graphs:
             yield text, self.parsed_graphs[text]
@@ -64,6 +67,18 @@ class Extractor:
             for sen, graph in self._parse_text(text):
                 self.parsed_graphs[sen] = graph
                 yield sen, graph
+
+    def _parse_pretokenized(self, sen_tuple):
+        if sen_tuple not in self.parsed_graphs:
+            sen_tuple, graph = self._parse_sen_tuple(sen_tuple)
+            self.parsed_graphs[sen_tuple] = graph
+
+        return sen_tuple, self.parsed_graphs[sen_tuple]
+
+    def parse_pretokenized(self, sens):
+        for sen in sens:
+            sen_tuple, graph = self._parse_pretokenized(tuple(sen))
+            yield sen_tuple, graph
 
     def get_doc_ids(self, sen: str):
         """Return the document ids associated with the given sentence

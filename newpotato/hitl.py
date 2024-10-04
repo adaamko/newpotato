@@ -5,6 +5,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, Generator, List, Optional
 
+from tuw_nlp.text.utils import tuple_if_list
+
 from newpotato.datatypes import Triplet
 from newpotato.extractors.extractor import Extractor
 
@@ -49,14 +51,14 @@ class HITLManager:
 
     def load_triplets(self, triplet_data, oracle=False):
         text_to_triplets = {
-            text: [
+            tuple_if_list(item["text"]): [
                 (
                     Triplet.from_json(triplet[0]),
                     triplet[1],
                 )
-                for triplet in triplets
+                for triplet in item["triplets"]
             ]
-            for text, triplets in triplet_data.items()
+            for item in triplet_data
         }
 
         if oracle:
@@ -83,7 +85,7 @@ class HITLManager:
         Returns:
             HITLManager: a new HITLManager object with the restored state
         """
-        hitl = HITLManager(extractor_type=data['extractor_type'])
+        hitl = HITLManager(extractor_type=data["extractor_type"])
         hitl.load_triplets(data["triplets"], oracle=oracle)
         hitl.load_extractor(data["extractor_data"])
         return hitl
@@ -98,12 +100,17 @@ class HITLManager:
         """
 
         return {
-            "triplets": {
-                text: [(triplet[0].to_json(), triplet[1]) for triplet in triplets]
+            "triplets": [
+                {
+                    "text": text,
+                    "triplets": [
+                        (triplet[0].to_json(), triplet[1]) for triplet in triplets
+                    ],
+                }
                 for text, triplets in self.text_to_triplets.items()
-            },
+            ],
             "extractor_data": self.extractor.to_json(),
-            "extractor_type": self.extractor_type
+            "extractor_type": self.extractor_type,
         }
 
     def save(self, fn: str):

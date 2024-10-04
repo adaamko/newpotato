@@ -1,6 +1,8 @@
 import logging
 from collections import Counter, defaultdict
 
+from tqdm import tqdm
+
 from newpotato.datatypes import triplets_to_str
 
 
@@ -40,7 +42,7 @@ class Evaluator:
 
     def _get_events(self):
         self.events = []
-        for sen, gold_list in self.gen_texts_with_gold_triplets():
+        for sen, gold_list in tqdm(self.gen_texts_with_gold_triplets()):
             golds = set(gold_list)
             preds = set(self.infer_triplets(sen))
             self.events.append((sen, golds, preds))
@@ -64,7 +66,9 @@ class Evaluator:
     def write_events(self, stream):
         for sen, golds, preds in self.get_events():
             e_type = self.get_event_type(golds, preds)
-            logging.debug("golds: " + ", ".join(f"{(t.pred, t.args)}" for t, positive in golds))
+            logging.debug(
+                "golds: " + ", ".join(f"{(t.pred, t.args)}" for t in golds)
+            )
             logging.debug("preds: " + ", ".join(f"{(t.pred, t.args)}" for t in preds))
             golds_txt = " ".join(triplets_to_str(golds))
             preds_txt = " ".join(triplets_to_str(preds))
@@ -84,6 +88,7 @@ class Evaluator:
         res["n_gold"] = c["gold"]
         res["n_pred"] = c["pred"]
         res["n_docs"] = c["docs"]
+        res["n_corr"] = c["tp"]
         res["docs_corr"] = c["docs_corr"]
         res["docs_acc"] = c["docs_corr"] / c["docs"]
         if c["pred"] > 0:

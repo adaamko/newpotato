@@ -14,19 +14,6 @@ console = Console()
 
 
 class NPTerminalClient:
-    def __init__(self, args):
-        if args.load_state is None:
-            console.print("no state file provided, initializing new HITL")
-            self.hitl = HITLManager(args.extractor_type)
-        else:
-            console.print(f"loading HITL state from {args.load_state}")
-            self.hitl = HITLManager.load(args.load_state, args.oracle)
-
-        if args.upload_file:
-            self._upload_file(args.upload_file)
-
-        self.learn = args.learn
-
     def load_from_file(self):
         while True:
             console.print("[bold cyan]Enter path to HITL state file:[/bold cyan]")
@@ -39,6 +26,20 @@ class NPTerminalClient:
                 self.hitl = hitl
                 console.print(
                     f"[bold cyan]Successfully loaded HITL state from {fn}[/bold cyan]"
+                )
+                return
+
+    def write_patterns_to_file(self):
+        while True:
+            console.print("[bold cyan]Enter path to patterns file:[/bold cyan]")
+            fn = input("> ")
+            try:
+                self.hitl.extractor.save_patterns(fn)
+            except FileNotFoundError:
+                console.print(f"[bold red] No such file or directory: {fn}[/bold red]")
+            else:
+                console.print(
+                    f"[bold cyan]Successfully saved extractor patterns to {fn}[/bold cyan]"
                 )
                 return
 
@@ -134,11 +135,13 @@ class NPTerminalClient:
 
         console.print(table)
 
-    def evaluate(self):
+    def evaluate(self, fn=None):
         evaluator = HITLEvaluator(self.hitl)
         results = evaluator.get_results()
         for key, value in results.items():
             console.print(f"{key}: {value}")
+        if fn:
+            evaluator.write_events_to_file(fn)
 
     def print_graphs(self):
         table = Table(show_header=True, header_style="bold magenta")
@@ -206,7 +209,7 @@ class NPTerminalClient:
         while True:
             self.print_status()
             console.print(
-                "[bold cyan]Choose an action:\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(R)ules\n\t(S)uggest\n\t(I)nference\n\t(E)valuate\n\t(L)oad\n\t(W)rite\n\t(C)lear\n\t(Q)uit\n\t(H)elp[/bold cyan]"
+                "[bold cyan]Choose an action:\n\t(U)pload\n\t(G)raphs\n\t(A)nnotate\n\t(R)ules\n\t(S)uggest\n\t(I)nference\n\t(E)valuate\n\t(L)oad\n\t(W)rite\n\t(P)atterns\n\t(C)lear\n\t(Q)uit\n\t(H)elp[/bold cyan]"
             )
             choice = input("> ").upper()
             if choice in ("S", "I") and not self.hitl.extractor.is_trained:
@@ -231,6 +234,8 @@ class NPTerminalClient:
                 self.load_from_file()
             elif choice == "W":
                 self.write_to_file()
+            elif choice == "P":
+                self.write_patterns_to_file()
             elif choice == "C":
                 self.clear_console()
             elif choice == "Q":
@@ -248,6 +253,7 @@ class NPTerminalClient:
                     + "\t(E)valuate: Evaluate rules on annotated sentences\n"
                     + "\t(L)oad: Load HITL state from file\n"
                     + "\t(W)rite: Write HITL state to file\n"
+                    + "\t(P)atterns: Write extractor patterns to file\n"
                     + "\t(C)lear: Clear the console\n"
                     + "\t(Q)uit: Exit the program\n"
                     + "\t(H)elp: Show this help message\n"
@@ -256,7 +262,7 @@ class NPTerminalClient:
             else:
                 console.print("[bold red]Invalid choice[/bold red]")
 
-    def run(self):
+    def run_interactive(self):
         try:
             self._run()
         except KeyboardInterrupt:
@@ -271,15 +277,59 @@ class NPTerminalClient:
             elif s == "n":
                 break
 
+    def run(self, args):
+        if args.load_state is None:
+            console.print("[cyan]no state file provided, initializing new HITL[/cyan]")
+            self.hitl = HITLManager(args.extractor_type)
+        else:
+            console.print(f"[cyan]loading HITL state from {args.load_state}[/cyan]")
+            self.hitl = HITLManager.load(args.load_state, args.oracle)
+        
+        if args.load_patterns:
+            console.print(f"[cyan]loading extractor patterns from {args.load_patterns}[/cyan]")
+            self.hitl.extractor.load_patterns(args.load_patterns)
+
+        if args.upload_text:
+            console.print(f"[cyan]loading text from {args.upload_text}[/cyan]")
+            self._upload_file(args.upload_text)
+
+        if args.get_rules:
+            console.print("[bold cyan]getting rules[/bold cyan]")
+            self.hitl.get_rules()
+
+        if args.evaluate:
+            self.evaluate(args.evaluate)
+
+        if args.save_patterns:
+            self.hitl.extractor.save_patterns(args.save_patterns)
+            console.print(
+                f"[bold cyan]Saved patterns to {args.save_patterns}[/bold cyan]"
+            )
+
+        if args.save_state:
+            self.hitl.save(args.save_state)
+            console.print(
+                f"[bold cyan]Saved HITL state to {args.save_state}[/bold cyan]"
+            )
+
+        if args.interactive:
+            self.run_interactive()
+
 
 def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-d", "--debug", action="store_true")
-    parser.add_argument("-e", "--learn", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-o", "--oracle", action="store_true")
+    parser.add_argument("-i", "--interactive", action="store_true")
+    parser.add_argument("-r", "--get_rules", action="store_true")
+    parser.add_argument("-e", "--evaluate", default=None, type=str)
     parser.add_argument("-l", "--load_state", default=None, type=str)
-    parser.add_argument("-u", "--upload_file", default=None, type=str)
-    parser.add_argument("-x", "--extractor_type", default='ud', type=str)
+    parser.add_argument("-lp", "--load_patterns", default=None, type=str)
+    parser.add_argument("-u", "--upload_text", default=None, type=str)
+    parser.add_argument("-p", "--save_patterns", default=None, type=str)
+    parser.add_argument("-s", "--save_state", default=None, type=str)
+    parser.add_argument("-x", "--extractor_type", default="ud", type=str)
     return parser.parse_args()
 
 
@@ -289,11 +339,13 @@ def main():
         format="%(asctime)s : %(module)s (%(lineno)s) - %(levelname)s - %(message)s",
         force=True,
     )
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.WARNING)
+    if args.interactive or args.verbose:
+        logging.getLogger().setLevel(logging.INFO)
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
-    client = NPTerminalClient(args)
-    client.run()
+    client = NPTerminalClient()
+    client.run(args)
 
 
 if __name__ == "__main__":

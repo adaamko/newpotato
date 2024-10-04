@@ -1,0 +1,718 @@
+{
+    "pred_graphs": {
+        "(u_10 / take|VERB  :AUX (u_9 / can|AUX))": 4,
+        "(u_3 / use|VERB)": 2,
+        "(u_10 / dosage|NOUN)": 2,
+        "(u_11 / dosage|NOUN  :AMOD (u_10 / intravenous|ADJ))": 2,
+        "(u_14 / dosage|NOUN  :AMOD (u_13 / recommend|VERB))": 2,
+        "(u_7 / recommend|VERB  :ADVMOD (u_5 / not|PART))": 1,
+        "(u_6 / advisable|ADJ)": 1,
+        "(u_38 / dose|NOUN  :AMOD (u_36 / total|ADJ)  :AMOD (u_37 / daily|ADJ))": 1,
+        "(u_2 / receive|VERB  :AUX (u_1 / can|AUX)  :ADVMOD (u_7 / intravenously|ADV))": 1,
+        "(u_18 / dose|NOUN  :AMOD (u_16 / maximum|ADJ)  :AMOD (u_17 / daily|ADJ))": 1,
+        "(u_6 / dosing|NOUN  :AMOD (u_5 / same|ADJ))": 1
+    },
+    "all_arg_graphs": {
+        "(u_0 / Ibuprofen|PROPN)": 2,
+        "(u_0 / adolescent|NOUN)": 2,
+        "(u_11 / 200|NUM  :NMOD (u_13 / 400|NUM  :CASE (u_12 / -|SYM))  :NUMMOD-of (u_14 / mg|NOUN))": 2,
+        "(u_16 / 4|NUM  :NMOD (u_18 / 6|NUM  :CASE (u_17 / -|SYM))  :NUMMOD-of (u_19 / hour|NOUN  :DET (u_15 / every|DET)))": 2,
+        "(u_2 / adult|NOUN)": 2,
+        "(u_23 / maximum|NOUN  :CASE (u_21 / with|ADP)  :DET (u_22 / a|DET)  :NMOD (u_26 / mg|NOUN  :CASE (u_24 / of|ADP)  :NUMMOD (u_25 / 1200|NUM)  :NMOD (u_28 / day|NOUN  :CASE (u_27 / per|ADP))))": 2,
+        "(u_1 / child|NOUN  :CASE (u_0 / in|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP))))))": 2,
+        "(u_1 / child|NOUN  :CASE (u_0 / for|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP))))))": 2,
+        "(u_2 / administration|NOUN  :NMOD (u_4 / infant|NOUN  :CASE (u_3 / in|ADP))  :ACL (u_5 / aged|ADJ  :OBL_TMOD (u_7 / month|NOUN  :NUMMOD (u_6 / 6|NUM))  :OBL (u_10 / year|NOUN  :CASE (u_8 / to|ADP)  :NUMMOD (u_9 / 1|NUM))))": 2,
+        "(u_2 / patient|NOUN  :CASE (u_0 / for|ADP)  :AMOD (u_1 / elderly|ADJ))": 2,
+        "(u_0 / adult|NOUN)": 2,
+        "(u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN))": 1,
+        "(u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN  :CONJ (u_9 / pain|NOUN))  :CONJ (u_8 / manage|VERB))": 1,
+        "(u_13 / mg|NOUN  :NUMMOD (u_12 / 10|NUM)  :NMOD (u_15 / kg|NOUN  :CASE (u_14 / /|SYM)))": 1,
+        "(u_17 / 6|NUM  :NMOD (u_19 / 8|NUM  :CASE (u_18 / -|SYM))  :NUMMOD-of (u_20 / hour|NOUN  :DET (u_16 / every|DET)))": 1,
+        "(u_23 / exceed|VERB  :ADVMOD (u_22 / not|PART)  :OBJ (u_25 / mg|NOUN  :NUMMOD (u_24 / 40|NUM)  :NMOD (u_27 / kg|NOUN  :CASE (u_26 / /|SYM)  :NMOD (u_29 / day|NOUN  :CC (u_28 / /|SYM)))))": 1,
+        "(u_1 / administration|NOUN  :AMOD (u_0 / intravenous|ADJ)  :NMOD (u_3 / ibuprofen|NOUN  :CASE (u_2 / of|ADP)))": 1,
+        "(u_9 / neonate|NOUN  :CASE (u_8 / for|ADP))": 1,
+        "(u_16 / kg|NOUN  :CASE (u_15 / /|SYM)  :NMOD-of (u_14 / mg|NOUN  :NUMMOD (u_13 / 10|NUM)))": 1,
+        "(u_25 / repeat|VERB  :AUX (u_23 / may|AUX)  :AUX_PASS (u_24 / be|AUX)  :OBL_TMOD (u_28 / hour|NOUN  :DET (u_26 / every|DET)  :NUMMOD (u_27 / 6|NUM)))": 1,
+        "(u_32 / maximum|NOUN  :NMOD (u_35 / mg|NOUN  :CASE (u_33 / of|ADP)  :NUMMOD (u_34 / 40|NUM)  :NMOD (u_37 / kg|NOUN  :CASE (u_36 / /|SYM)  :NMOD (u_39 / day|NOUN  :CASE (u_38 / /|SYM)))))": 1,
+        "(u_17 / mg|NOUN  :NUMMOD (u_16 / 5|NUM)  :NMOD (u_19 / kg|NOUN  :CASE (u_18 / /|SYM)))": 1,
+        "(u_21 / 6|NUM  :NMOD (u_23 / 8|NUM  :CASE (u_22 / -|SYM))  :NUMMOD-of (u_24 / hour|NOUN  :DET (u_20 / every|DET)))": 1,
+        "(u_33 / kg|NOUN  :CASE (u_32 / /|SYM)  :NMOD (u_35 / day|NOUN  :CC (u_34 / /|SYM))  :NMOD-of (u_31 / mg|NOUN  :NMOD-of (u_28 / maximum|NOUN)  :CASE (u_29 / of|ADP)  :NUMMOD (u_30 / 20|NUM)))": 1,
+        "(u_16 / mg|NOUN  :NUMMOD (u_15 / 200|NUM))": 1,
+        "(u_18 / 6|NUM  :NMOD (u_20 / 8|NUM  :CASE (u_19 / -|SYM))  :NUMMOD-of (u_21 / hour|NOUN  :DET (u_17 / every|DET)))": 1,
+        "(u_40 / exceed|VERB  :ADVMOD (u_39 / not|PART)  :OBJ (u_42 / mg|NOUN  :NUMMOD (u_41 / 1200|NUM)))": 1,
+        "(u_3 / 400|NUM  :NMOD (u_5 / 800|NUM  :CASE (u_4 / -|SYM))  :NUMMOD-of (u_6 / mg|NOUN))": 1,
+        "(u_10 / hour|NOUN  :DET (u_8 / every|DET)  :NUMMOD (u_9 / 6|NUM))": 1,
+        "(u_21 / mg|NOUN  :NUMMOD (u_20 / 3200|NUM))": 1,
+        "(u_2 / patient|NOUN  :CASE (u_0 / in|ADP)  :AMOD (u_1 / elderly|ADJ))": 1,
+        "(u_8 / adult|NOUN  :CASE (u_7 / as|ADP))": 1
+    },
+    "arg_graphs_by_pred": {
+        "use": {
+            "(u_0 / Ibuprofen|PROPN)": 2,
+            "(u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN))": 1,
+            "(u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN  :CONJ (u_9 / pain|NOUN))  :CONJ (u_8 / manage|VERB))": 1
+        },
+        "can take": {
+            "(u_0 / adolescent|NOUN)": 2,
+            "(u_11 / 200|NUM  :NMOD (u_13 / 400|NUM  :CASE (u_12 / -|SYM))  :NUMMOD-of (u_14 / mg|NOUN))": 2,
+            "(u_16 / 4|NUM  :NMOD (u_18 / 6|NUM  :CASE (u_17 / -|SYM))  :NUMMOD-of (u_19 / hour|NOUN  :DET (u_15 / every|DET)))": 2,
+            "(u_2 / adult|NOUN)": 2,
+            "(u_23 / maximum|NOUN  :CASE (u_21 / with|ADP)  :DET (u_22 / a|DET)  :NMOD (u_26 / mg|NOUN  :CASE (u_24 / of|ADP)  :NUMMOD (u_25 / 1200|NUM)  :NMOD (u_28 / day|NOUN  :CASE (u_27 / per|ADP))))": 2
+        },
+        "dosage": {
+            "(u_1 / child|NOUN  :CASE (u_0 / in|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP))))))": 2,
+            "(u_13 / mg|NOUN  :NUMMOD (u_12 / 10|NUM)  :NMOD (u_15 / kg|NOUN  :CASE (u_14 / /|SYM)))": 1,
+            "(u_17 / 6|NUM  :NMOD (u_19 / 8|NUM  :CASE (u_18 / -|SYM))  :NUMMOD-of (u_20 / hour|NOUN  :DET (u_16 / every|DET)))": 1,
+            "(u_23 / exceed|VERB  :ADVMOD (u_22 / not|PART)  :OBJ (u_25 / mg|NOUN  :NUMMOD (u_24 / 40|NUM)  :NMOD (u_27 / kg|NOUN  :CASE (u_26 / /|SYM)  :NMOD (u_29 / day|NOUN  :CC (u_28 / /|SYM)))))": 1
+        },
+        "not recommend": {
+            "(u_1 / administration|NOUN  :AMOD (u_0 / intravenous|ADJ)  :NMOD (u_3 / ibuprofen|NOUN  :CASE (u_2 / of|ADP)))": 1,
+            "(u_9 / neonate|NOUN  :CASE (u_8 / for|ADP))": 1
+        },
+        "intravenous dosage": {
+            "(u_1 / child|NOUN  :CASE (u_0 / for|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP))))))": 2,
+            "(u_16 / kg|NOUN  :CASE (u_15 / /|SYM)  :NMOD-of (u_14 / mg|NOUN  :NUMMOD (u_13 / 10|NUM)))": 1,
+            "(u_25 / repeat|VERB  :AUX (u_23 / may|AUX)  :AUX_PASS (u_24 / be|AUX)  :OBL_TMOD (u_28 / hour|NOUN  :DET (u_26 / every|DET)  :NUMMOD (u_27 / 6|NUM)))": 1,
+            "(u_32 / maximum|NOUN  :NMOD (u_35 / mg|NOUN  :CASE (u_33 / of|ADP)  :NUMMOD (u_34 / 40|NUM)  :NMOD (u_37 / kg|NOUN  :CASE (u_36 / /|SYM)  :NMOD (u_39 / day|NOUN  :CASE (u_38 / /|SYM)))))": 1
+        },
+        "recommend dosage": {
+            "(u_2 / administration|NOUN  :NMOD (u_4 / infant|NOUN  :CASE (u_3 / in|ADP))  :ACL (u_5 / aged|ADJ  :OBL_TMOD (u_7 / month|NOUN  :NUMMOD (u_6 / 6|NUM))  :OBL (u_10 / year|NOUN  :CASE (u_8 / to|ADP)  :NUMMOD (u_9 / 1|NUM))))": 2,
+            "(u_17 / mg|NOUN  :NUMMOD (u_16 / 5|NUM)  :NMOD (u_19 / kg|NOUN  :CASE (u_18 / /|SYM)))": 1,
+            "(u_21 / 6|NUM  :NMOD (u_23 / 8|NUM  :CASE (u_22 / -|SYM))  :NUMMOD-of (u_24 / hour|NOUN  :DET (u_20 / every|DET)))": 1,
+            "(u_33 / kg|NOUN  :CASE (u_32 / /|SYM)  :NMOD (u_35 / day|NOUN  :CC (u_34 / /|SYM))  :NMOD-of (u_31 / mg|NOUN  :NMOD-of (u_28 / maximum|NOUN)  :CASE (u_29 / of|ADP)  :NUMMOD (u_30 / 20|NUM)))": 1
+        },
+        "advisable": {
+            "(u_2 / patient|NOUN  :CASE (u_0 / for|ADP)  :AMOD (u_1 / elderly|ADJ))": 1,
+            "(u_16 / mg|NOUN  :NUMMOD (u_15 / 200|NUM))": 1,
+            "(u_18 / 6|NUM  :NMOD (u_20 / 8|NUM  :CASE (u_19 / -|SYM))  :NUMMOD-of (u_21 / hour|NOUN  :DET (u_17 / every|DET)))": 1
+        },
+        "total daily dose": {
+            "(u_2 / patient|NOUN  :CASE (u_0 / for|ADP)  :AMOD (u_1 / elderly|ADJ))": 1,
+            "(u_40 / exceed|VERB  :ADVMOD (u_39 / not|PART)  :OBJ (u_42 / mg|NOUN  :NUMMOD (u_41 / 1200|NUM)))": 1
+        },
+        "can receive intravenously": {
+            "(u_0 / adult|NOUN)": 1,
+            "(u_3 / 400|NUM  :NMOD (u_5 / 800|NUM  :CASE (u_4 / -|SYM))  :NUMMOD-of (u_6 / mg|NOUN))": 1,
+            "(u_10 / hour|NOUN  :DET (u_8 / every|DET)  :NUMMOD (u_9 / 6|NUM))": 1
+        },
+        "maximum daily dose": {
+            "(u_0 / adult|NOUN)": 1,
+            "(u_21 / mg|NOUN  :NUMMOD (u_20 / 3200|NUM))": 1
+        },
+        "same dosing": {
+            "(u_2 / patient|NOUN  :CASE (u_0 / in|ADP)  :AMOD (u_1 / elderly|ADJ))": 1,
+            "(u_8 / adult|NOUN  :CASE (u_7 / as|ADP))": 1
+        }
+    },
+    "triplet_graphs": [
+        {
+            "pattern": "(u_3 / use|VERB  :NSUBJ_PASS (u_0 / Ibuprofen|PROPN)  :ADVCL (u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN)))",
+            "arg_roots": [
+                1,
+                2
+            ],
+            "inferred_nodes": [],
+            "count": 1
+        },
+        {
+            "pattern": "(u_3 / use|VERB  :NSUBJ_PASS (u_0 / Ibuprofen|PROPN)  :ADVCL (u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN  :CONJ (u_9 / pain|NOUN))  :CONJ (u_8 / manage|VERB)))",
+            "arg_roots": [
+                1,
+                2
+            ],
+            "inferred_nodes": [
+                2,
+                3
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_10 / take|VERB  :NSUBJ (u_0 / adolescent|NOUN)  :AUX (u_9 / can|AUX)  :OBJ (u_14 / mg|NOUN  :NUMMOD (u_11 / 200|NUM  :NMOD (u_13 / 400|NUM  :CASE (u_12 / -|SYM))))  :OBL_TMOD (u_19 / hour|NOUN  :DET (u_15 / every|DET)  :NUMMOD (u_16 / 4|NUM  :NMOD (u_18 / 6|NUM  :CASE (u_17 / -|SYM)))))",
+            "arg_roots": [
+                1,
+                8,
+                3
+            ],
+            "inferred_nodes": [],
+            "count": 1
+        },
+        {
+            "pattern": "(u_0 / adolescent|NOUN  :CONJ (u_2 / adult|NOUN)  :NSUBJ-of (u_10 / take|VERB  :AUX (u_9 / can|AUX)  :OBJ (u_14 / mg|NOUN  :NUMMOD (u_11 / 200|NUM  :NMOD (u_13 / 400|NUM  :CASE (u_12 / -|SYM))))  :OBL_TMOD (u_19 / hour|NOUN  :DET (u_15 / every|DET)  :NUMMOD (u_16 / 4|NUM  :NMOD (u_18 / 6|NUM  :CASE (u_17 / -|SYM))))))",
+            "arg_roots": [
+                2,
+                9,
+                4
+            ],
+            "inferred_nodes": [
+                1
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_10 / take|VERB  :NSUBJ (u_0 / adolescent|NOUN)  :AUX (u_9 / can|AUX)  :OBL (u_23 / maximum|NOUN  :CASE (u_21 / with|ADP)  :DET (u_22 / a|DET)  :NMOD (u_26 / mg|NOUN  :CASE (u_24 / of|ADP)  :NUMMOD (u_25 / 1200|NUM)  :NMOD (u_28 / day|NOUN  :CASE (u_27 / per|ADP)))))",
+            "arg_roots": [
+                1,
+                3
+            ],
+            "inferred_nodes": [],
+            "count": 1
+        },
+        {
+            "pattern": "(u_0 / adolescent|NOUN  :CONJ (u_2 / adult|NOUN)  :NSUBJ-of (u_10 / take|VERB  :AUX (u_9 / can|AUX)  :OBL (u_23 / maximum|NOUN  :CASE (u_21 / with|ADP)  :DET (u_22 / a|DET)  :NMOD (u_26 / mg|NOUN  :CASE (u_24 / of|ADP)  :NUMMOD (u_25 / 1200|NUM)  :NMOD (u_28 / day|NOUN  :CASE (u_27 / per|ADP))))))",
+            "arg_roots": [
+                2,
+                4
+            ],
+            "inferred_nodes": [
+                1
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_1 / child|NOUN  :CASE (u_0 / in|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_13 / mg|NOUN  :NSUBJ (u_10 / dosage|NOUN)  :NUMMOD (u_12 / 10|NUM)  :NMOD (u_15 / kg|NOUN  :CASE (u_14 / /|SYM))  :NMOD_TMOD (u_20 / hour|NOUN  :DET (u_16 / every|DET)  :NUMMOD (u_17 / 6|NUM  :NMOD (u_19 / 8|NUM  :CASE (u_18 / -|SYM))))))",
+            "arg_roots": [
+                2,
+                0,
+                5
+            ],
+            "inferred_nodes": [],
+            "count": 1
+        },
+        {
+            "pattern": "(u_1 / child|NOUN  :CASE (u_0 / in|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_13 / mg|NOUN  :NSUBJ (u_10 / dosage|NOUN)  :ADVCL (u_23 / exceed|VERB  :ADVMOD (u_22 / not|PART)  :OBJ (u_25 / mg|NOUN  :NUMMOD (u_24 / 40|NUM)  :NMOD (u_27 / kg|NOUN  :CASE (u_26 / /|SYM)  :NMOD (u_29 / day|NOUN  :CC (u_28 / /|SYM)))))))",
+            "arg_roots": [
+                1,
+                4
+            ],
+            "inferred_nodes": [
+                0
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_1 / administration|NOUN  :AMOD (u_0 / intravenous|ADJ)  :NMOD (u_3 / ibuprofen|NOUN  :CASE (u_2 / of|ADP))  :NSUBJ_PASS-of (u_7 / recommend|VERB  :ADVMOD (u_5 / not|PART)  :OBL (u_9 / neonate|NOUN  :CASE (u_8 / for|ADP))))",
+            "arg_roots": [
+                1,
+                4
+            ],
+            "inferred_nodes": [],
+            "count": 1
+        },
+        {
+            "pattern": "(u_1 / child|NOUN  :CASE (u_0 / for|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_14 / mg|NOUN  :NSUBJ (u_11 / dosage|NOUN  :AMOD (u_10 / intravenous|ADJ))  :NUMMOD (u_13 / 10|NUM)  :NMOD (u_16 / kg|NOUN  :CASE (u_15 / /|SYM))  :NMOD (u_20 / dose|NOUN  :ACL_RELCL (u_25 / repeat|VERB  :AUX (u_23 / may|AUX)  :AUX_PASS (u_24 / be|AUX)  :OBL_TMOD (u_28 / hour|NOUN  :DET (u_26 / every|DET)  :NUMMOD (u_27 / 6|NUM))))))",
+            "arg_roots": [
+                2,
+                0,
+                10
+            ],
+            "inferred_nodes": [
+                5
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_1 / child|NOUN  :CASE (u_0 / for|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_14 / mg|NOUN  :NSUBJ (u_11 / dosage|NOUN  :AMOD (u_10 / intravenous|ADJ))  :NMOD (u_20 / dose|NOUN  :ACL_RELCL (u_25 / repeat|VERB  :OBL (u_32 / maximum|NOUN  :NMOD (u_35 / mg|NOUN  :CASE (u_33 / of|ADP)  :NUMMOD (u_34 / 40|NUM)  :NMOD (u_37 / kg|NOUN  :CASE (u_36 / /|SYM)  :NMOD (u_39 / day|NOUN  :CASE (u_38 / /|SYM)))))))))",
+            "arg_roots": [
+                1,
+                8
+            ],
+            "inferred_nodes": [
+                0,
+                4,
+                7
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_2 / administration|NOUN  :NMOD (u_4 / infant|NOUN  :CASE (u_3 / in|ADP))  :ACL (u_5 / aged|ADJ  :OBL_TMOD (u_7 / month|NOUN  :NUMMOD (u_6 / 6|NUM))  :OBL (u_10 / year|NOUN  :CASE (u_8 / to|ADP)  :NUMMOD (u_9 / 1|NUM)))  :OBL-of (u_17 / mg|NOUN  :NSUBJ (u_14 / dosage|NOUN  :AMOD (u_13 / recommend|VERB))  :NUMMOD (u_16 / 5|NUM)  :NMOD (u_19 / kg|NOUN  :CASE (u_18 / /|SYM))  :NMOD_TMOD (u_24 / hour|NOUN  :DET (u_20 / every|DET)  :NUMMOD (u_21 / 6|NUM  :NMOD (u_23 / 8|NUM  :CASE (u_22 / -|SYM))))))",
+            "arg_roots": [
+                2,
+                0,
+                5
+            ],
+            "inferred_nodes": [
+                2
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_2 / administration|NOUN  :NMOD (u_4 / infant|NOUN  :CASE (u_3 / in|ADP))  :ACL (u_5 / aged|ADJ  :OBL_TMOD (u_7 / month|NOUN  :NUMMOD (u_6 / 6|NUM))  :OBL (u_10 / year|NOUN  :CASE (u_8 / to|ADP)  :NUMMOD (u_9 / 1|NUM)))  :OBL-of (u_17 / mg|NOUN  :NSUBJ (u_14 / dosage|NOUN  :AMOD (u_13 / recommend|VERB))  :NMOD (u_28 / maximum|NOUN  :NMOD (u_31 / mg|NOUN  :CASE (u_29 / of|ADP)  :NUMMOD (u_30 / 20|NUM)  :NMOD (u_33 / kg|NOUN  :CASE (u_32 / /|SYM)  :NMOD (u_35 / day|NOUN  :CC (u_34 / /|SYM)))))))",
+            "arg_roots": [
+                1,
+                6
+            ],
+            "inferred_nodes": [
+                1,
+                0
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_2 / patient|NOUN  :CASE (u_0 / for|ADP)  :AMOD (u_1 / elderly|ADJ)  :OBL-of (u_6 / advisable|ADJ  :CSUBJ (u_8 / start|VERB  :OBL (u_11 / dose|NOUN  :NMOD (u_16 / mg|NOUN  :NUMMOD (u_15 / 200|NUM)  :NMOD_TMOD (u_21 / hour|NOUN  :DET (u_17 / every|DET)  :NUMMOD (u_18 / 6|NUM  :NMOD (u_20 / 8|NUM  :CASE (u_19 / -|SYM)))))))))",
+            "arg_roots": [
+                1,
+                6,
+                8
+            ],
+            "inferred_nodes": [
+                4,
+                5
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_2 / patient|NOUN  :CASE (u_0 / for|ADP)  :AMOD (u_1 / elderly|ADJ)  :OBL-of (u_6 / advisable|ADJ  :CSUBJ (u_8 / start|VERB  :OBL (u_26 / risk|NOUN  :NMOD (u_38 / dose|NOUN  :AMOD (u_36 / total|ADJ)  :AMOD (u_37 / daily|ADJ)  :ACL (u_40 / exceed|VERB  :ADVMOD (u_39 / not|PART)  :OBJ (u_42 / mg|NOUN  :NUMMOD (u_41 / 1200|NUM))))))))",
+            "arg_roots": [
+                1,
+                8
+            ],
+            "inferred_nodes": [
+                0,
+                4,
+                5
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_2 / receive|VERB  :NSUBJ (u_0 / adult|NOUN)  :AUX (u_1 / can|AUX)  :OBJ (u_6 / mg|NOUN  :NUMMOD (u_3 / 400|NUM  :NMOD (u_5 / 800|NUM  :CASE (u_4 / -|SYM))))  :ADVMOD (u_7 / intravenously|ADV)  :OBL_TMOD (u_10 / hour|NOUN  :DET (u_8 / every|DET)  :NUMMOD (u_9 / 6|NUM)))",
+            "arg_roots": [
+                1,
+                7,
+                3
+            ],
+            "inferred_nodes": [],
+            "count": 1
+        },
+        {
+            "pattern": "(u_18 / dose|NOUN  :AMOD (u_16 / maximum|ADJ)  :AMOD (u_17 / daily|ADJ)  :NMOD (u_21 / mg|NOUN  :NUMMOD (u_20 / 3200|NUM))  :OBL-of (u_2 / receive|VERB  :NSUBJ (u_0 / adult|NOUN)))",
+            "arg_roots": [
+                1,
+                5
+            ],
+            "inferred_nodes": [
+                0
+            ],
+            "count": 1
+        },
+        {
+            "pattern": "(u_2 / patient|NOUN  :CASE (u_0 / in|ADP)  :AMOD (u_1 / elderly|ADJ)  :OBL-of (u_9 / apply|VERB  :NSUBJ (u_6 / dosing|NOUN  :AMOD (u_5 / same|ADJ)  :NMOD (u_8 / adult|NOUN  :CASE (u_7 / as|ADP)))))",
+            "arg_roots": [
+                4,
+                2
+            ],
+            "inferred_nodes": [
+                0
+            ],
+            "count": 1
+        }
+    ],
+    "triplet_graphs_by_pred": {
+        "use": [
+            {
+                "pattern": "(u_3 / use|VERB  :NSUBJ_PASS (u_0 / Ibuprofen|PROPN)  :ADVCL (u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN)))",
+                "arg_roots": [
+                    1,
+                    2
+                ],
+                "inferred_nodes": [],
+                "count": 1
+            },
+            {
+                "pattern": "(u_3 / use|VERB  :NSUBJ_PASS (u_0 / Ibuprofen|PROPN)  :ADVCL (u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN  :CONJ (u_9 / pain|NOUN))  :CONJ (u_8 / manage|VERB)))",
+                "arg_roots": [
+                    1,
+                    2
+                ],
+                "inferred_nodes": [
+                    2,
+                    3
+                ],
+                "count": 1
+            }
+        ],
+        "can take": [
+            {
+                "pattern": "(u_10 / take|VERB  :NSUBJ (u_0 / adolescent|NOUN)  :AUX (u_9 / can|AUX)  :OBJ (u_14 / mg|NOUN  :NUMMOD (u_11 / 200|NUM  :NMOD (u_13 / 400|NUM  :CASE (u_12 / -|SYM))))  :OBL_TMOD (u_19 / hour|NOUN  :DET (u_15 / every|DET)  :NUMMOD (u_16 / 4|NUM  :NMOD (u_18 / 6|NUM  :CASE (u_17 / -|SYM)))))",
+                "arg_roots": [
+                    1,
+                    8,
+                    3
+                ],
+                "inferred_nodes": [],
+                "count": 1
+            },
+            {
+                "pattern": "(u_0 / adolescent|NOUN  :CONJ (u_2 / adult|NOUN)  :NSUBJ-of (u_10 / take|VERB  :AUX (u_9 / can|AUX)  :OBJ (u_14 / mg|NOUN  :NUMMOD (u_11 / 200|NUM  :NMOD (u_13 / 400|NUM  :CASE (u_12 / -|SYM))))  :OBL_TMOD (u_19 / hour|NOUN  :DET (u_15 / every|DET)  :NUMMOD (u_16 / 4|NUM  :NMOD (u_18 / 6|NUM  :CASE (u_17 / -|SYM))))))",
+                "arg_roots": [
+                    2,
+                    9,
+                    4
+                ],
+                "inferred_nodes": [
+                    1
+                ],
+                "count": 1
+            },
+            {
+                "pattern": "(u_10 / take|VERB  :NSUBJ (u_0 / adolescent|NOUN)  :AUX (u_9 / can|AUX)  :OBL (u_23 / maximum|NOUN  :CASE (u_21 / with|ADP)  :DET (u_22 / a|DET)  :NMOD (u_26 / mg|NOUN  :CASE (u_24 / of|ADP)  :NUMMOD (u_25 / 1200|NUM)  :NMOD (u_28 / day|NOUN  :CASE (u_27 / per|ADP)))))",
+                "arg_roots": [
+                    1,
+                    3
+                ],
+                "inferred_nodes": [],
+                "count": 1
+            },
+            {
+                "pattern": "(u_0 / adolescent|NOUN  :CONJ (u_2 / adult|NOUN)  :NSUBJ-of (u_10 / take|VERB  :AUX (u_9 / can|AUX)  :OBL (u_23 / maximum|NOUN  :CASE (u_21 / with|ADP)  :DET (u_22 / a|DET)  :NMOD (u_26 / mg|NOUN  :CASE (u_24 / of|ADP)  :NUMMOD (u_25 / 1200|NUM)  :NMOD (u_28 / day|NOUN  :CASE (u_27 / per|ADP))))))",
+                "arg_roots": [
+                    2,
+                    4
+                ],
+                "inferred_nodes": [
+                    1
+                ],
+                "count": 1
+            }
+        ],
+        "dosage": [
+            {
+                "pattern": "(u_1 / child|NOUN  :CASE (u_0 / in|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_13 / mg|NOUN  :NSUBJ (u_10 / dosage|NOUN)  :NUMMOD (u_12 / 10|NUM)  :NMOD (u_15 / kg|NOUN  :CASE (u_14 / /|SYM))  :NMOD_TMOD (u_20 / hour|NOUN  :DET (u_16 / every|DET)  :NUMMOD (u_17 / 6|NUM  :NMOD (u_19 / 8|NUM  :CASE (u_18 / -|SYM))))))",
+                "arg_roots": [
+                    2,
+                    0,
+                    5
+                ],
+                "inferred_nodes": [],
+                "count": 1
+            },
+            {
+                "pattern": "(u_1 / child|NOUN  :CASE (u_0 / in|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_13 / mg|NOUN  :NSUBJ (u_10 / dosage|NOUN)  :ADVCL (u_23 / exceed|VERB  :ADVMOD (u_22 / not|PART)  :OBJ (u_25 / mg|NOUN  :NUMMOD (u_24 / 40|NUM)  :NMOD (u_27 / kg|NOUN  :CASE (u_26 / /|SYM)  :NMOD (u_29 / day|NOUN  :CC (u_28 / /|SYM)))))))",
+                "arg_roots": [
+                    1,
+                    4
+                ],
+                "inferred_nodes": [
+                    0
+                ],
+                "count": 1
+            }
+        ],
+        "not recommend": [
+            {
+                "pattern": "(u_1 / administration|NOUN  :AMOD (u_0 / intravenous|ADJ)  :NMOD (u_3 / ibuprofen|NOUN  :CASE (u_2 / of|ADP))  :NSUBJ_PASS-of (u_7 / recommend|VERB  :ADVMOD (u_5 / not|PART)  :OBL (u_9 / neonate|NOUN  :CASE (u_8 / for|ADP))))",
+                "arg_roots": [
+                    1,
+                    4
+                ],
+                "inferred_nodes": [],
+                "count": 1
+            }
+        ],
+        "intravenous dosage": [
+            {
+                "pattern": "(u_1 / child|NOUN  :CASE (u_0 / for|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_14 / mg|NOUN  :NSUBJ (u_11 / dosage|NOUN  :AMOD (u_10 / intravenous|ADJ))  :NUMMOD (u_13 / 10|NUM)  :NMOD (u_16 / kg|NOUN  :CASE (u_15 / /|SYM))  :NMOD (u_20 / dose|NOUN  :ACL_RELCL (u_25 / repeat|VERB  :AUX (u_23 / may|AUX)  :AUX_PASS (u_24 / be|AUX)  :OBL_TMOD (u_28 / hour|NOUN  :DET (u_26 / every|DET)  :NUMMOD (u_27 / 6|NUM))))))",
+                "arg_roots": [
+                    2,
+                    0,
+                    10
+                ],
+                "inferred_nodes": [
+                    5
+                ],
+                "count": 1
+            },
+            {
+                "pattern": "(u_1 / child|NOUN  :CASE (u_0 / for|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_14 / mg|NOUN  :NSUBJ (u_11 / dosage|NOUN  :AMOD (u_10 / intravenous|ADJ))  :NMOD (u_20 / dose|NOUN  :ACL_RELCL (u_25 / repeat|VERB  :OBL (u_32 / maximum|NOUN  :NMOD (u_35 / mg|NOUN  :CASE (u_33 / of|ADP)  :NUMMOD (u_34 / 40|NUM)  :NMOD (u_37 / kg|NOUN  :CASE (u_36 / /|SYM)  :NMOD (u_39 / day|NOUN  :CASE (u_38 / /|SYM)))))))))",
+                "arg_roots": [
+                    1,
+                    8
+                ],
+                "inferred_nodes": [
+                    0,
+                    4,
+                    7
+                ],
+                "count": 1
+            }
+        ],
+        "recommend dosage": [
+            {
+                "pattern": "(u_2 / administration|NOUN  :NMOD (u_4 / infant|NOUN  :CASE (u_3 / in|ADP))  :ACL (u_5 / aged|ADJ  :OBL_TMOD (u_7 / month|NOUN  :NUMMOD (u_6 / 6|NUM))  :OBL (u_10 / year|NOUN  :CASE (u_8 / to|ADP)  :NUMMOD (u_9 / 1|NUM)))  :OBL-of (u_17 / mg|NOUN  :NSUBJ (u_14 / dosage|NOUN  :AMOD (u_13 / recommend|VERB))  :NUMMOD (u_16 / 5|NUM)  :NMOD (u_19 / kg|NOUN  :CASE (u_18 / /|SYM))  :NMOD_TMOD (u_24 / hour|NOUN  :DET (u_20 / every|DET)  :NUMMOD (u_21 / 6|NUM  :NMOD (u_23 / 8|NUM  :CASE (u_22 / -|SYM))))))",
+                "arg_roots": [
+                    2,
+                    0,
+                    5
+                ],
+                "inferred_nodes": [
+                    2
+                ],
+                "count": 1
+            },
+            {
+                "pattern": "(u_2 / administration|NOUN  :NMOD (u_4 / infant|NOUN  :CASE (u_3 / in|ADP))  :ACL (u_5 / aged|ADJ  :OBL_TMOD (u_7 / month|NOUN  :NUMMOD (u_6 / 6|NUM))  :OBL (u_10 / year|NOUN  :CASE (u_8 / to|ADP)  :NUMMOD (u_9 / 1|NUM)))  :OBL-of (u_17 / mg|NOUN  :NSUBJ (u_14 / dosage|NOUN  :AMOD (u_13 / recommend|VERB))  :NMOD (u_28 / maximum|NOUN  :NMOD (u_31 / mg|NOUN  :CASE (u_29 / of|ADP)  :NUMMOD (u_30 / 20|NUM)  :NMOD (u_33 / kg|NOUN  :CASE (u_32 / /|SYM)  :NMOD (u_35 / day|NOUN  :CC (u_34 / /|SYM)))))))",
+                "arg_roots": [
+                    1,
+                    6
+                ],
+                "inferred_nodes": [
+                    1,
+                    0
+                ],
+                "count": 1
+            }
+        ],
+        "advisable": [
+            {
+                "pattern": "(u_2 / patient|NOUN  :CASE (u_0 / for|ADP)  :AMOD (u_1 / elderly|ADJ)  :OBL-of (u_6 / advisable|ADJ  :CSUBJ (u_8 / start|VERB  :OBL (u_11 / dose|NOUN  :NMOD (u_16 / mg|NOUN  :NUMMOD (u_15 / 200|NUM)  :NMOD_TMOD (u_21 / hour|NOUN  :DET (u_17 / every|DET)  :NUMMOD (u_18 / 6|NUM  :NMOD (u_20 / 8|NUM  :CASE (u_19 / -|SYM)))))))))",
+                "arg_roots": [
+                    1,
+                    6,
+                    8
+                ],
+                "inferred_nodes": [
+                    4,
+                    5
+                ],
+                "count": 1
+            }
+        ],
+        "total daily dose": [
+            {
+                "pattern": "(u_2 / patient|NOUN  :CASE (u_0 / for|ADP)  :AMOD (u_1 / elderly|ADJ)  :OBL-of (u_6 / advisable|ADJ  :CSUBJ (u_8 / start|VERB  :OBL (u_26 / risk|NOUN  :NMOD (u_38 / dose|NOUN  :AMOD (u_36 / total|ADJ)  :AMOD (u_37 / daily|ADJ)  :ACL (u_40 / exceed|VERB  :ADVMOD (u_39 / not|PART)  :OBJ (u_42 / mg|NOUN  :NUMMOD (u_41 / 1200|NUM))))))))",
+                "arg_roots": [
+                    1,
+                    8
+                ],
+                "inferred_nodes": [
+                    0,
+                    4,
+                    5
+                ],
+                "count": 1
+            }
+        ],
+        "can receive intravenously": [
+            {
+                "pattern": "(u_2 / receive|VERB  :NSUBJ (u_0 / adult|NOUN)  :AUX (u_1 / can|AUX)  :OBJ (u_6 / mg|NOUN  :NUMMOD (u_3 / 400|NUM  :NMOD (u_5 / 800|NUM  :CASE (u_4 / -|SYM))))  :ADVMOD (u_7 / intravenously|ADV)  :OBL_TMOD (u_10 / hour|NOUN  :DET (u_8 / every|DET)  :NUMMOD (u_9 / 6|NUM)))",
+                "arg_roots": [
+                    1,
+                    7,
+                    3
+                ],
+                "inferred_nodes": [],
+                "count": 1
+            }
+        ],
+        "maximum daily dose": [
+            {
+                "pattern": "(u_18 / dose|NOUN  :AMOD (u_16 / maximum|ADJ)  :AMOD (u_17 / daily|ADJ)  :NMOD (u_21 / mg|NOUN  :NUMMOD (u_20 / 3200|NUM))  :OBL-of (u_2 / receive|VERB  :NSUBJ (u_0 / adult|NOUN)))",
+                "arg_roots": [
+                    1,
+                    5
+                ],
+                "inferred_nodes": [
+                    0
+                ],
+                "count": 1
+            }
+        ],
+        "same dosing": [
+            {
+                "pattern": "(u_2 / patient|NOUN  :CASE (u_0 / in|ADP)  :AMOD (u_1 / elderly|ADJ)  :OBL-of (u_9 / apply|VERB  :NSUBJ (u_6 / dosing|NOUN  :AMOD (u_5 / same|ADJ)  :NMOD (u_8 / adult|NOUN  :CASE (u_7 / as|ADP)))))",
+                "arg_roots": [
+                    4,
+                    2
+                ],
+                "inferred_nodes": [
+                    0
+                ],
+                "count": 1
+            }
+        ]
+    },
+    "patterns_to_sens": {
+        "(u_3 / use|VERB)": [
+            "Ibuprofen is commonly used to reduce fever and manage pain."
+        ],
+        "(u_0 / Ibuprofen|PROPN)": [
+            "Ibuprofen is commonly used to reduce fever and manage pain."
+        ],
+        "(u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN))": [
+            "Ibuprofen is commonly used to reduce fever and manage pain."
+        ],
+        "(u_3 / use|VERB  :NSUBJ_PASS (u_0 / Ibuprofen|PROPN)  :ADVCL (u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN)))": [
+            "Ibuprofen is commonly used to reduce fever and manage pain."
+        ],
+        "(u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN  :CONJ (u_9 / pain|NOUN))  :CONJ (u_8 / manage|VERB))": [
+            "Ibuprofen is commonly used to reduce fever and manage pain."
+        ],
+        "(u_3 / use|VERB  :NSUBJ_PASS (u_0 / Ibuprofen|PROPN)  :ADVCL (u_5 / reduce|VERB  :MARK (u_4 / to|PART)  :OBJ (u_6 / fever|NOUN  :CONJ (u_9 / pain|NOUN))  :CONJ (u_8 / manage|VERB)))": [
+            "Ibuprofen is commonly used to reduce fever and manage pain."
+        ],
+        "(u_10 / take|VERB  :AUX (u_9 / can|AUX))": [
+            "Adolescents and adults (12 years and older) can take 200-400 mg every 4-6 hours, with a maximum of 1200 mg per day without medical supervision."
+        ],
+        "(u_0 / adolescent|NOUN)": [
+            "Adolescents and adults (12 years and older) can take 200-400 mg every 4-6 hours, with a maximum of 1200 mg per day without medical supervision."
+        ],
+        "(u_11 / 200|NUM  :NMOD (u_13 / 400|NUM  :CASE (u_12 / -|SYM))  :NUMMOD-of (u_14 / mg|NOUN))": [
+            "Adolescents and adults (12 years and older) can take 200-400 mg every 4-6 hours, with a maximum of 1200 mg per day without medical supervision."
+        ],
+        "(u_16 / 4|NUM  :NMOD (u_18 / 6|NUM  :CASE (u_17 / -|SYM))  :NUMMOD-of (u_19 / hour|NOUN  :DET (u_15 / every|DET)))": [
+            "Adolescents and adults (12 years and older) can take 200-400 mg every 4-6 hours, with a maximum of 1200 mg per day without medical supervision."
+        ],
+        "(u_10 / take|VERB  :NSUBJ (u_0 / adolescent|NOUN)  :AUX (u_9 / can|AUX)  :OBJ (u_14 / mg|NOUN  :NUMMOD (u_11 / 200|NUM  :NMOD (u_13 / 400|NUM  :CASE (u_12 / -|SYM))))  :OBL_TMOD (u_19 / hour|NOUN  :DET (u_15 / every|DET)  :NUMMOD (u_16 / 4|NUM  :NMOD (u_18 / 6|NUM  :CASE (u_17 / -|SYM)))))": [
+            "Adolescents and adults (12 years and older) can take 200-400 mg every 4-6 hours, with a maximum of 1200 mg per day without medical supervision."
+        ],
+        "(u_2 / adult|NOUN)": [
+            "Adolescents and adults (12 years and older) can take 200-400 mg every 4-6 hours, with a maximum of 1200 mg per day without medical supervision."
+        ],
+        "(u_0 / adolescent|NOUN  :CONJ (u_2 / adult|NOUN)  :NSUBJ-of (u_10 / take|VERB  :AUX (u_9 / can|AUX)  :OBJ (u_14 / mg|NOUN  :NUMMOD (u_11 / 200|NUM  :NMOD (u_13 / 400|NUM  :CASE (u_12 / -|SYM))))  :OBL_TMOD (u_19 / hour|NOUN  :DET (u_15 / every|DET)  :NUMMOD (u_16 / 4|NUM  :NMOD (u_18 / 6|NUM  :CASE (u_17 / -|SYM))))))": [
+            "Adolescents and adults (12 years and older) can take 200-400 mg every 4-6 hours, with a maximum of 1200 mg per day without medical supervision."
+        ],
+        "(u_23 / maximum|NOUN  :CASE (u_21 / with|ADP)  :DET (u_22 / a|DET)  :NMOD (u_26 / mg|NOUN  :CASE (u_24 / of|ADP)  :NUMMOD (u_25 / 1200|NUM)  :NMOD (u_28 / day|NOUN  :CASE (u_27 / per|ADP))))": [
+            "Adolescents and adults (12 years and older) can take 200-400 mg every 4-6 hours, with a maximum of 1200 mg per day without medical supervision."
+        ],
+        "(u_10 / take|VERB  :NSUBJ (u_0 / adolescent|NOUN)  :AUX (u_9 / can|AUX)  :OBL (u_23 / maximum|NOUN  :CASE (u_21 / with|ADP)  :DET (u_22 / a|DET)  :NMOD (u_26 / mg|NOUN  :CASE (u_24 / of|ADP)  :NUMMOD (u_25 / 1200|NUM)  :NMOD (u_28 / day|NOUN  :CASE (u_27 / per|ADP)))))": [
+            "Adolescents and adults (12 years and older) can take 200-400 mg every 4-6 hours, with a maximum of 1200 mg per day without medical supervision."
+        ],
+        "(u_0 / adolescent|NOUN  :CONJ (u_2 / adult|NOUN)  :NSUBJ-of (u_10 / take|VERB  :AUX (u_9 / can|AUX)  :OBL (u_23 / maximum|NOUN  :CASE (u_21 / with|ADP)  :DET (u_22 / a|DET)  :NMOD (u_26 / mg|NOUN  :CASE (u_24 / of|ADP)  :NUMMOD (u_25 / 1200|NUM)  :NMOD (u_28 / day|NOUN  :CASE (u_27 / per|ADP))))))": [
+            "Adolescents and adults (12 years and older) can take 200-400 mg every 4-6 hours, with a maximum of 1200 mg per day without medical supervision."
+        ],
+        "(u_10 / dosage|NOUN)": [
+            "In children aged 1 to 12 years, the typical dosage is 10 mg/kg every 6-8 hours, not exceeding 40 mg/kg/day."
+        ],
+        "(u_1 / child|NOUN  :CASE (u_0 / in|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP))))))": [
+            "In children aged 1 to 12 years, the typical dosage is 10 mg/kg every 6-8 hours, not exceeding 40 mg/kg/day."
+        ],
+        "(u_13 / mg|NOUN  :NUMMOD (u_12 / 10|NUM)  :NMOD (u_15 / kg|NOUN  :CASE (u_14 / /|SYM)))": [
+            "In children aged 1 to 12 years, the typical dosage is 10 mg/kg every 6-8 hours, not exceeding 40 mg/kg/day."
+        ],
+        "(u_17 / 6|NUM  :NMOD (u_19 / 8|NUM  :CASE (u_18 / -|SYM))  :NUMMOD-of (u_20 / hour|NOUN  :DET (u_16 / every|DET)))": [
+            "In children aged 1 to 12 years, the typical dosage is 10 mg/kg every 6-8 hours, not exceeding 40 mg/kg/day."
+        ],
+        "(u_1 / child|NOUN  :CASE (u_0 / in|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_13 / mg|NOUN  :NSUBJ (u_10 / dosage|NOUN)  :NUMMOD (u_12 / 10|NUM)  :NMOD (u_15 / kg|NOUN  :CASE (u_14 / /|SYM))  :NMOD_TMOD (u_20 / hour|NOUN  :DET (u_16 / every|DET)  :NUMMOD (u_17 / 6|NUM  :NMOD (u_19 / 8|NUM  :CASE (u_18 / -|SYM))))))": [
+            "In children aged 1 to 12 years, the typical dosage is 10 mg/kg every 6-8 hours, not exceeding 40 mg/kg/day."
+        ],
+        "(u_23 / exceed|VERB  :ADVMOD (u_22 / not|PART)  :OBJ (u_25 / mg|NOUN  :NUMMOD (u_24 / 40|NUM)  :NMOD (u_27 / kg|NOUN  :CASE (u_26 / /|SYM)  :NMOD (u_29 / day|NOUN  :CC (u_28 / /|SYM)))))": [
+            "In children aged 1 to 12 years, the typical dosage is 10 mg/kg every 6-8 hours, not exceeding 40 mg/kg/day."
+        ],
+        "(u_1 / child|NOUN  :CASE (u_0 / in|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_13 / mg|NOUN  :NSUBJ (u_10 / dosage|NOUN)  :ADVCL (u_23 / exceed|VERB  :ADVMOD (u_22 / not|PART)  :OBJ (u_25 / mg|NOUN  :NUMMOD (u_24 / 40|NUM)  :NMOD (u_27 / kg|NOUN  :CASE (u_26 / /|SYM)  :NMOD (u_29 / day|NOUN  :CC (u_28 / /|SYM)))))))": [
+            "In children aged 1 to 12 years, the typical dosage is 10 mg/kg every 6-8 hours, not exceeding 40 mg/kg/day."
+        ],
+        "(u_7 / recommend|VERB  :ADVMOD (u_5 / not|PART))": [
+            "Intravenous administration of ibuprofen is not typically recommended for neonates."
+        ],
+        "(u_1 / administration|NOUN  :AMOD (u_0 / intravenous|ADJ)  :NMOD (u_3 / ibuprofen|NOUN  :CASE (u_2 / of|ADP)))": [
+            "Intravenous administration of ibuprofen is not typically recommended for neonates."
+        ],
+        "(u_9 / neonate|NOUN  :CASE (u_8 / for|ADP))": [
+            "Intravenous administration of ibuprofen is not typically recommended for neonates."
+        ],
+        "(u_1 / administration|NOUN  :AMOD (u_0 / intravenous|ADJ)  :NMOD (u_3 / ibuprofen|NOUN  :CASE (u_2 / of|ADP))  :NSUBJ_PASS-of (u_7 / recommend|VERB  :ADVMOD (u_5 / not|PART)  :OBL (u_9 / neonate|NOUN  :CASE (u_8 / for|ADP))))": [
+            "Intravenous administration of ibuprofen is not typically recommended for neonates."
+        ],
+        "(u_11 / dosage|NOUN  :AMOD (u_10 / intravenous|ADJ))": [
+            "For children aged 1 to 12 years, the recommended intravenous dosage is 10 mg/kg as a single dose, which may be repeated every 6 hours, with a maximum of 40 mg/kg/day."
+        ],
+        "(u_1 / child|NOUN  :CASE (u_0 / for|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP))))))": [
+            "For children aged 1 to 12 years, the recommended intravenous dosage is 10 mg/kg as a single dose, which may be repeated every 6 hours, with a maximum of 40 mg/kg/day."
+        ],
+        "(u_16 / kg|NOUN  :CASE (u_15 / /|SYM)  :NMOD-of (u_14 / mg|NOUN  :NUMMOD (u_13 / 10|NUM)))": [
+            "For children aged 1 to 12 years, the recommended intravenous dosage is 10 mg/kg as a single dose, which may be repeated every 6 hours, with a maximum of 40 mg/kg/day."
+        ],
+        "(u_25 / repeat|VERB  :AUX (u_23 / may|AUX)  :AUX_PASS (u_24 / be|AUX)  :OBL_TMOD (u_28 / hour|NOUN  :DET (u_26 / every|DET)  :NUMMOD (u_27 / 6|NUM)))": [
+            "For children aged 1 to 12 years, the recommended intravenous dosage is 10 mg/kg as a single dose, which may be repeated every 6 hours, with a maximum of 40 mg/kg/day."
+        ],
+        "(u_1 / child|NOUN  :CASE (u_0 / for|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_14 / mg|NOUN  :NSUBJ (u_11 / dosage|NOUN  :AMOD (u_10 / intravenous|ADJ))  :NUMMOD (u_13 / 10|NUM)  :NMOD (u_16 / kg|NOUN  :CASE (u_15 / /|SYM))  :NMOD (u_20 / dose|NOUN  :ACL_RELCL (u_25 / repeat|VERB  :AUX (u_23 / may|AUX)  :AUX_PASS (u_24 / be|AUX)  :OBL_TMOD (u_28 / hour|NOUN  :DET (u_26 / every|DET)  :NUMMOD (u_27 / 6|NUM))))))": [
+            "For children aged 1 to 12 years, the recommended intravenous dosage is 10 mg/kg as a single dose, which may be repeated every 6 hours, with a maximum of 40 mg/kg/day."
+        ],
+        "(u_32 / maximum|NOUN  :NMOD (u_35 / mg|NOUN  :CASE (u_33 / of|ADP)  :NUMMOD (u_34 / 40|NUM)  :NMOD (u_37 / kg|NOUN  :CASE (u_36 / /|SYM)  :NMOD (u_39 / day|NOUN  :CASE (u_38 / /|SYM)))))": [
+            "For children aged 1 to 12 years, the recommended intravenous dosage is 10 mg/kg as a single dose, which may be repeated every 6 hours, with a maximum of 40 mg/kg/day."
+        ],
+        "(u_1 / child|NOUN  :CASE (u_0 / for|ADP)  :ACL (u_2 / aged|ADJ  :OBL_TMOD (u_6 / year|NOUN  :NUMMOD (u_3 / 1|NUM  :NMOD (u_5 / 12|NUM  :CASE (u_4 / to|ADP)))))  :OBL-of (u_14 / mg|NOUN  :NSUBJ (u_11 / dosage|NOUN  :AMOD (u_10 / intravenous|ADJ))  :NMOD (u_20 / dose|NOUN  :ACL_RELCL (u_25 / repeat|VERB  :OBL (u_32 / maximum|NOUN  :NMOD (u_35 / mg|NOUN  :CASE (u_33 / of|ADP)  :NUMMOD (u_34 / 40|NUM)  :NMOD (u_37 / kg|NOUN  :CASE (u_36 / /|SYM)  :NMOD (u_39 / day|NOUN  :CASE (u_38 / /|SYM)))))))))": [
+            "For children aged 1 to 12 years, the recommended intravenous dosage is 10 mg/kg as a single dose, which may be repeated every 6 hours, with a maximum of 40 mg/kg/day."
+        ],
+        "(u_14 / dosage|NOUN  :AMOD (u_13 / recommend|VERB))": [
+            "For oral administration in infants aged 6 months to 1 year, the recommended dosage is 5 mg/kg every 6-8 hours, with a maximum of 20 mg/kg/day."
+        ],
+        "(u_2 / administration|NOUN  :NMOD (u_4 / infant|NOUN  :CASE (u_3 / in|ADP))  :ACL (u_5 / aged|ADJ  :OBL_TMOD (u_7 / month|NOUN  :NUMMOD (u_6 / 6|NUM))  :OBL (u_10 / year|NOUN  :CASE (u_8 / to|ADP)  :NUMMOD (u_9 / 1|NUM))))": [
+            "For oral administration in infants aged 6 months to 1 year, the recommended dosage is 5 mg/kg every 6-8 hours, with a maximum of 20 mg/kg/day."
+        ],
+        "(u_17 / mg|NOUN  :NUMMOD (u_16 / 5|NUM)  :NMOD (u_19 / kg|NOUN  :CASE (u_18 / /|SYM)))": [
+            "For oral administration in infants aged 6 months to 1 year, the recommended dosage is 5 mg/kg every 6-8 hours, with a maximum of 20 mg/kg/day."
+        ],
+        "(u_21 / 6|NUM  :NMOD (u_23 / 8|NUM  :CASE (u_22 / -|SYM))  :NUMMOD-of (u_24 / hour|NOUN  :DET (u_20 / every|DET)))": [
+            "For oral administration in infants aged 6 months to 1 year, the recommended dosage is 5 mg/kg every 6-8 hours, with a maximum of 20 mg/kg/day."
+        ],
+        "(u_2 / administration|NOUN  :NMOD (u_4 / infant|NOUN  :CASE (u_3 / in|ADP))  :ACL (u_5 / aged|ADJ  :OBL_TMOD (u_7 / month|NOUN  :NUMMOD (u_6 / 6|NUM))  :OBL (u_10 / year|NOUN  :CASE (u_8 / to|ADP)  :NUMMOD (u_9 / 1|NUM)))  :OBL-of (u_17 / mg|NOUN  :NSUBJ (u_14 / dosage|NOUN  :AMOD (u_13 / recommend|VERB))  :NUMMOD (u_16 / 5|NUM)  :NMOD (u_19 / kg|NOUN  :CASE (u_18 / /|SYM))  :NMOD_TMOD (u_24 / hour|NOUN  :DET (u_20 / every|DET)  :NUMMOD (u_21 / 6|NUM  :NMOD (u_23 / 8|NUM  :CASE (u_22 / -|SYM))))))": [
+            "For oral administration in infants aged 6 months to 1 year, the recommended dosage is 5 mg/kg every 6-8 hours, with a maximum of 20 mg/kg/day."
+        ],
+        "(u_33 / kg|NOUN  :CASE (u_32 / /|SYM)  :NMOD (u_35 / day|NOUN  :CC (u_34 / /|SYM))  :NMOD-of (u_31 / mg|NOUN  :NMOD-of (u_28 / maximum|NOUN)  :CASE (u_29 / of|ADP)  :NUMMOD (u_30 / 20|NUM)))": [
+            "For oral administration in infants aged 6 months to 1 year, the recommended dosage is 5 mg/kg every 6-8 hours, with a maximum of 20 mg/kg/day."
+        ],
+        "(u_2 / administration|NOUN  :NMOD (u_4 / infant|NOUN  :CASE (u_3 / in|ADP))  :ACL (u_5 / aged|ADJ  :OBL_TMOD (u_7 / month|NOUN  :NUMMOD (u_6 / 6|NUM))  :OBL (u_10 / year|NOUN  :CASE (u_8 / to|ADP)  :NUMMOD (u_9 / 1|NUM)))  :OBL-of (u_17 / mg|NOUN  :NSUBJ (u_14 / dosage|NOUN  :AMOD (u_13 / recommend|VERB))  :NMOD (u_28 / maximum|NOUN  :NMOD (u_31 / mg|NOUN  :CASE (u_29 / of|ADP)  :NUMMOD (u_30 / 20|NUM)  :NMOD (u_33 / kg|NOUN  :CASE (u_32 / /|SYM)  :NMOD (u_35 / day|NOUN  :CC (u_34 / /|SYM)))))))": [
+            "For oral administration in infants aged 6 months to 1 year, the recommended dosage is 5 mg/kg every 6-8 hours, with a maximum of 20 mg/kg/day."
+        ],
+        "(u_6 / advisable|ADJ)": [
+            "For elderly patients, it is advisable to start with lower doses, such as 200 mg every 6-8 hours, due to increased risks of gastrointestinal and renal side effects, with the total daily dose not exceeding 1200 mg."
+        ],
+        "(u_2 / patient|NOUN  :CASE (u_0 / for|ADP)  :AMOD (u_1 / elderly|ADJ))": [
+            "For elderly patients, it is advisable to start with lower doses, such as 200 mg every 6-8 hours, due to increased risks of gastrointestinal and renal side effects, with the total daily dose not exceeding 1200 mg."
+        ],
+        "(u_16 / mg|NOUN  :NUMMOD (u_15 / 200|NUM))": [
+            "For elderly patients, it is advisable to start with lower doses, such as 200 mg every 6-8 hours, due to increased risks of gastrointestinal and renal side effects, with the total daily dose not exceeding 1200 mg."
+        ],
+        "(u_18 / 6|NUM  :NMOD (u_20 / 8|NUM  :CASE (u_19 / -|SYM))  :NUMMOD-of (u_21 / hour|NOUN  :DET (u_17 / every|DET)))": [
+            "For elderly patients, it is advisable to start with lower doses, such as 200 mg every 6-8 hours, due to increased risks of gastrointestinal and renal side effects, with the total daily dose not exceeding 1200 mg."
+        ],
+        "(u_2 / patient|NOUN  :CASE (u_0 / for|ADP)  :AMOD (u_1 / elderly|ADJ)  :OBL-of (u_6 / advisable|ADJ  :CSUBJ (u_8 / start|VERB  :OBL (u_11 / dose|NOUN  :NMOD (u_16 / mg|NOUN  :NUMMOD (u_15 / 200|NUM)  :NMOD_TMOD (u_21 / hour|NOUN  :DET (u_17 / every|DET)  :NUMMOD (u_18 / 6|NUM  :NMOD (u_20 / 8|NUM  :CASE (u_19 / -|SYM)))))))))": [
+            "For elderly patients, it is advisable to start with lower doses, such as 200 mg every 6-8 hours, due to increased risks of gastrointestinal and renal side effects, with the total daily dose not exceeding 1200 mg."
+        ],
+        "(u_38 / dose|NOUN  :AMOD (u_36 / total|ADJ)  :AMOD (u_37 / daily|ADJ))": [
+            "For elderly patients, it is advisable to start with lower doses, such as 200 mg every 6-8 hours, due to increased risks of gastrointestinal and renal side effects, with the total daily dose not exceeding 1200 mg."
+        ],
+        "(u_40 / exceed|VERB  :ADVMOD (u_39 / not|PART)  :OBJ (u_42 / mg|NOUN  :NUMMOD (u_41 / 1200|NUM)))": [
+            "For elderly patients, it is advisable to start with lower doses, such as 200 mg every 6-8 hours, due to increased risks of gastrointestinal and renal side effects, with the total daily dose not exceeding 1200 mg."
+        ],
+        "(u_2 / patient|NOUN  :CASE (u_0 / for|ADP)  :AMOD (u_1 / elderly|ADJ)  :OBL-of (u_6 / advisable|ADJ  :CSUBJ (u_8 / start|VERB  :OBL (u_26 / risk|NOUN  :NMOD (u_38 / dose|NOUN  :AMOD (u_36 / total|ADJ)  :AMOD (u_37 / daily|ADJ)  :ACL (u_40 / exceed|VERB  :ADVMOD (u_39 / not|PART)  :OBJ (u_42 / mg|NOUN  :NUMMOD (u_41 / 1200|NUM))))))))": [
+            "For elderly patients, it is advisable to start with lower doses, such as 200 mg every 6-8 hours, due to increased risks of gastrointestinal and renal side effects, with the total daily dose not exceeding 1200 mg."
+        ],
+        "(u_2 / receive|VERB  :AUX (u_1 / can|AUX)  :ADVMOD (u_7 / intravenously|ADV))": [
+            "Adults can receive 400-800 mg intravenously every 6 hours as needed, with a maximum daily dose of 3200 mg."
+        ],
+        "(u_0 / adult|NOUN)": [
+            "Adults can receive 400-800 mg intravenously every 6 hours as needed, with a maximum daily dose of 3200 mg."
+        ],
+        "(u_3 / 400|NUM  :NMOD (u_5 / 800|NUM  :CASE (u_4 / -|SYM))  :NUMMOD-of (u_6 / mg|NOUN))": [
+            "Adults can receive 400-800 mg intravenously every 6 hours as needed, with a maximum daily dose of 3200 mg."
+        ],
+        "(u_10 / hour|NOUN  :DET (u_8 / every|DET)  :NUMMOD (u_9 / 6|NUM))": [
+            "Adults can receive 400-800 mg intravenously every 6 hours as needed, with a maximum daily dose of 3200 mg."
+        ],
+        "(u_2 / receive|VERB  :NSUBJ (u_0 / adult|NOUN)  :AUX (u_1 / can|AUX)  :OBJ (u_6 / mg|NOUN  :NUMMOD (u_3 / 400|NUM  :NMOD (u_5 / 800|NUM  :CASE (u_4 / -|SYM))))  :ADVMOD (u_7 / intravenously|ADV)  :OBL_TMOD (u_10 / hour|NOUN  :DET (u_8 / every|DET)  :NUMMOD (u_9 / 6|NUM)))": [
+            "Adults can receive 400-800 mg intravenously every 6 hours as needed, with a maximum daily dose of 3200 mg."
+        ],
+        "(u_18 / dose|NOUN  :AMOD (u_16 / maximum|ADJ)  :AMOD (u_17 / daily|ADJ))": [
+            "Adults can receive 400-800 mg intravenously every 6 hours as needed, with a maximum daily dose of 3200 mg."
+        ],
+        "(u_21 / mg|NOUN  :NUMMOD (u_20 / 3200|NUM))": [
+            "Adults can receive 400-800 mg intravenously every 6 hours as needed, with a maximum daily dose of 3200 mg."
+        ],
+        "(u_18 / dose|NOUN  :AMOD (u_16 / maximum|ADJ)  :AMOD (u_17 / daily|ADJ)  :NMOD (u_21 / mg|NOUN  :NUMMOD (u_20 / 3200|NUM))  :OBL-of (u_2 / receive|VERB  :NSUBJ (u_0 / adult|NOUN)))": [
+            "Adults can receive 400-800 mg intravenously every 6 hours as needed, with a maximum daily dose of 3200 mg."
+        ],
+        "(u_6 / dosing|NOUN  :AMOD (u_5 / same|ADJ))": [
+            "In elderly patients, the same dosing as adults applies, but careful monitoring is necessary due to higher sensitivity."
+        ],
+        "(u_2 / patient|NOUN  :CASE (u_0 / in|ADP)  :AMOD (u_1 / elderly|ADJ))": [
+            "In elderly patients, the same dosing as adults applies, but careful monitoring is necessary due to higher sensitivity."
+        ],
+        "(u_8 / adult|NOUN  :CASE (u_7 / as|ADP))": [
+            "In elderly patients, the same dosing as adults applies, but careful monitoring is necessary due to higher sensitivity."
+        ],
+        "(u_2 / patient|NOUN  :CASE (u_0 / in|ADP)  :AMOD (u_1 / elderly|ADJ)  :OBL-of (u_9 / apply|VERB  :NSUBJ (u_6 / dosing|NOUN  :AMOD (u_5 / same|ADJ)  :NMOD (u_8 / adult|NOUN  :CASE (u_7 / as|ADP)))))": [
+            "In elderly patients, the same dosing as adults applies, but careful monitoring is necessary due to higher sensitivity."
+        ]
+    }
+}
