@@ -42,7 +42,7 @@ def load_fd(input_file):
         if not row_id:
             continue
 
-        is_cause, is_treat = bool(is_cause), bool(is_treat)
+        is_cause, is_treat = bool(float(is_cause)), bool(float(is_treat))
 
         yield row_id, sentence, food_entity, disease_entity, is_cause, is_treat
 
@@ -65,7 +65,7 @@ def load_and_map_fd(input_file, extractor, which_rel):
         if which_rel == "CAUSE" and not is_cause:
             # no triplets to add
             continue
-        elif not is_treat:
+        elif which_rel == "TREAT" and not is_treat:
             # no triplets to add
             continue
 
